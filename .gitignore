@@ -1,6 +1,5 @@
 **/.*_history
-**/.zcomphash
-**/.zcompdump
+**/.zcomp*
 **/.chpwd-recent-dirs
 **/.git.bfg-report
 **/.DS_Store
