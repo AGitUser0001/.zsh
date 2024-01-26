@@ -38,7 +38,7 @@ read-definition-file() {
   builtin shift
   while builtin read -r || [[ $REPLY ]] {
     case $REPLY {
-      (\#*) builtin local action=${REPLY##\#[[:space:]]#}
+      (\#*) builtin local action=${REPLY##\#}
       case $action {
         (flags[[:space:]]##*) flags=${action##flags( |$'\t')##};|
         (if[[:space:]]##*) if=${action##if( |$'\t')##};|
