@@ -48,27 +48,6 @@ fpath[${fpath[(i)/usr/local/share/zsh/site-functions]}]=( )
 
 autoload -Uz $fpath[1]/**/[!_]*(-N^/)
 
-read-definition-file() {
-  case $# {
-    (0) print 'Usage: read-definition-file <file> [command]'; return;;
-    (1) 2=$0;;
-    (2);;
-    (*) _err 'too many arguments'; return;;
-  }
-  local flags= if=true
-  while read -r || [[ $REPLY ]] {
-    case $REPLY {
-      (\#*) local action=${REPLY##\#[[:space:]]#}
-      case $action {
-        (flags[[:space:]]##*) flags=${action##flags( |$'\t')##};|
-        (if[[:space:]]##*) if=${action##if( |$'\t')##};|
-      };;
-      ('');;
-      (*) eval $if '&&' $2 $flags $REPLY;;
-    }
-  } < $1 >/dev/null
-}
-
 read-definition-file $ZDOTDIR/define/definitions.zsh read-definition-file
 
 () {
@@ -97,7 +76,7 @@ read-definition-file $ZDOTDIR/define/definitions.zsh read-definition-file
 
 _default_setup='
   builtin emulate -LR zsh
-  setopt extended_glob magic_equal_subst bsd_echo glob_star_short prompt_subst brace_ccl combining_chars c_bases octal_zeroes
+  builtin setopt extended_glob magic_equal_subst bsd_echo glob_star_short prompt_subst brace_ccl combining_chars c_bases octal_zeroes
 '
 
 USER_ZDOTDIR=$ZDOTDIR

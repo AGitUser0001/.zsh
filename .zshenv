@@ -7,8 +7,6 @@ typeset -U path fpath cdpath module_path PATH FPATH CDPATH MODULE_PATH
 setopt extended_glob magic_equal_subst bsd_echo glob_star_short prompt_subst brace_ccl
 export PATH
 
-while read -r || [[ $REPLY ]] {
-  eval hash -d $REPLY
-} < $ZDOTDIR/define/dirs.zsh >/dev/null
+read-definition-file $ZDOTDIR/define/nameddirs.zsh hash -d
 
 true # $? == 0
