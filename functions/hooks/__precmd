@@ -11,4 +11,7 @@ if [[ $PWD != ${:P} ]] cd ${:P}
 __prompt-init
 
 # Debug
-if (( ZSH_DEBUG )) zprof 2> /dev/null
+if (( ZSH_DEBUG )) {
+  zmodload zsh/zprof
+  zprof
+}

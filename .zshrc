@@ -133,9 +133,6 @@ TAB_TITLE=''
 WORDCHARS='*?'
 HELP_SKIPFUNC=( visudo purge )
 
-typeset -A help_aliases
-help_aliases[sudoedit]=sudo
-
 PROMPT_EOL_MARK='%k%f%b%s'
 PROMPT=$'%K{blue} %3~ %F{blue}%(4V"%K{%1v}%F{%2v} %B%3v%4v%5v%b %F{%1v}")%K{%6v}%F{%7v} %8vs $__nobg%F{%6v} %k%f%b%s%(#"%B%F{red}%#%b%f"%#) '
 PROMPT2=$'%K{208}%F{black} $(
@@ -154,11 +151,6 @@ upbrew() {
 
 _evf $ZDOTDIR/pyutils.zsh
 _evf $ZDOTDIR/zstyle.init.zsh
-
-alias sc='kill %1 2>/dev/null || while true; do kill -9 $(pgrep -n ScreenTime) 2>/dev/null; done &'
-alias sm='defaults write com.apple.WindowManager GloballyEnabled -int $((1-$(defaults read com.apple.WindowManager GloballyEnabled)))'
-alias sedit=sudoedit sudoed=sudoedit se=sudoedit
-alias scr="screen -q -U -T '$TERM'"
 
 __reset
 

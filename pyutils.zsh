@@ -1,5 +1,3 @@
-typeset -A help_aliases
-
 py() {
   if [[ $0 == py ]] {
     python3 "$@"
@@ -14,6 +12,5 @@ py() {
     name=py${name:6}
 
     functions -c py $name
-    help_aliases[$name]=python
   }
 }
