@@ -1,0 +1,4 @@
+local i=0;
+local prt=();
+for x ( "$@" ) { prt+=("%B${(l:${##}::0:)$((++i))}%b) $x") }
+if (($#prt > 0)) { print -PraC $((int(ceil($#/3.)))) $prt }

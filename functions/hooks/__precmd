@@ -1,0 +1,14 @@
+eval $_default_setup
+
+__time-cmds
+if (( __cmdran )) __reset
+ 
+eval -- $PROMPT_COMMAND
+eval $_default_setup
+while [[ ! -e ${:P} ]] cd ..
+if [[ $PWD != ${:P} ]] cd ${:P}
+
+__prompt-init
+
+# Debug
+if (( ZSH_DEBUG )) zprof 2> /dev/null

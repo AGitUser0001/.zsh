@@ -1,0 +1,27 @@
+eval $_default_setup
+local -a match mbegin mend
+
+case $1 {
+  (d)
+    case $2 {
+      (*) return 1;;
+    };;
+  (n)
+    case $2 {
+      (realpath(e|):*)
+        typeset -ga reply=( "${${2#*:}:P}" )
+        if [[ ${2%%:*} == *e ]] [[ -e $reply[1] ]];;
+      (*) return 1;;
+    };;
+  (c)
+    local expl;
+    case $PREFIX {
+      (realpath:*)
+        compset -P1 '*:'
+        _path_files -/ -g'*(-N/)'
+        _path_files -g'*(-N^/)' -S']';;
+      (*)
+        local prefix=( realpath )
+        _wanted prefix expl 'prefix' compadd -S':' -a prefix;;
+    }
+}

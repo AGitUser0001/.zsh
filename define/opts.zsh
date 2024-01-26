@@ -1,0 +1,7 @@
+interactive_comments chase_links
+extended_history hist_ignore_dups
+hist_fcntl_lock share_history notify
+ignore_eof c_bases octal_zeroes
+correct hist_verify
+
+no_beep no_flow_control

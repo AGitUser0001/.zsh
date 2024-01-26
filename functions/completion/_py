@@ -1,0 +1,3 @@
+#compdef -P py[0-9.]#
+
+_python

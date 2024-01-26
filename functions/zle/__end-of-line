@@ -1,0 +1,5 @@
+zle beginning-of-line
+while [[ $BUFFER[CURSOR+1] != $'\n' ]] {
+  (( CURSOR++ ))
+  (( CURSOR >= $#BUFFER )) && break
+}

@@ -1,0 +1,5 @@
+if [[ $1 == '-b' || $1 == '--binary' ]] {
+  LC_CTYPE=C $0 "${@:2}"
+  return 
+} elif [[ $1 == '--' ]] shift
+gsed -e 's/\b/\n/gi' -e 's/[\f\t\r ]//g' -- $1 | egrep -vi '^[^a-z0-9]*$' | sort | uniq -ci | sort -nr

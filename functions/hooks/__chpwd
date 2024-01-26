@@ -1,0 +1,2 @@
+eval $_default_setup
+if [[ $PWD != ${:P} ]] cd ${:P};

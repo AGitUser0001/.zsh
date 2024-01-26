@@ -1,0 +1,10 @@
+#compdef tcping
+
+local -a args=(
+  '-q[quiet]'
+  '-t+[timeout after which tcping exits]:deadline (seconds)'
+  '-u+[timeout after which tcping exits]:deadline (microseconds)'
+)
+
+_arguments -s -S $args \
+  '1:host:_hosts' '2:port number:->port'

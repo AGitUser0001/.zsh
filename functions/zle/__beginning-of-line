@@ -1,0 +1,11 @@
+local LINE=${NUMERIC:-${(fw)#LBUFFER}} l
+if (( LINE > BUFFERLINES )) {
+  LINE=$BUFFERLINES
+} elif (( LINE < 1 )) {
+  LINE=1
+}
+
+for (( l = LINE, CURSOR = 0, LINE = 1; ; CURSOR++ )) {
+  LINE=${(fw)#LBUFFER}
+  if (( LINE == l )) break;
+}

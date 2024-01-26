@@ -1,0 +1,72 @@
+#compdef dotnet
+# completions for dotnet
+
+local args=(
+  '--additionalprobingpath[Path containing probing policy and assemblies to probe for.]: :_directories'
+  '--additional-deps[Path to additional deps.json file.]:file:_files'
+  '--depsfile[Path to <application>.deps.json file.]:file:_files'
+  '--runtimeconfig[Path to <application>.runtimeconfig.json file.]:file:_files'
+  '--fx-version[Version of the installed Shared Framework to use to run the application.]:version:'
+  '--roll-forward[Roll forward to framework version]:setting:( LatestPatch Minor LatestMinor Major LatestMajor Disable )'
+
+  '-d[Enable diagnostic output.]'
+  '--diagnostics[Enable diagnostic output.]'
+  '-h[Show command line help.]: :_nothing'
+  '--help[Show command line help.]: :_nothing'
+  '--info[Display .NET information.]: :_nothing'
+  '--list-runtimes[Display the installed runtimes.]: :_nothing'
+  '--list-sdks[Display the installed SDKs.]: :_nothing'
+  '--version[Display .NET SDK version in use.]: :_nothing'
+
+  ': :->command'
+  '*: :->rest'
+)
+
+_arguments -C -A '-*' $args
+case $state {
+  (command)
+    local subcmds=(
+      'sdk-commands:sdk command:((
+        add\:"Add a package or reference to a .NET project."
+        build\:"Build a .NET project."
+        clean\:"Clean build outputs of a .NET project."
+        help\:"Show command line help."
+        list\:"List project references of a .NET project."
+        msbuild\:"Run Microsoft Build Engine (MSBuild) commands."
+        new\:"Create a new .NET project or file."
+        nuget\:"Provides additional NuGet commands."
+        pack\:"Create a NuGet package."
+        publish\:"Publish a .NET project for deployment."
+        remove\:"Remove a package or reference from a .NET project."
+        restore\:"Restore dependencies specified in a .NET project."
+        run\:"Build and run a .NET project output."
+        sln\:"Modify Visual Studio solution files."
+        store\:"Store the specified assemblies in the runtime package store."
+        test\:"Run unit tests using the test runner specified in a .NET project."
+        tool\:"Install or manage tools that extend the .NET experience."
+        vstest\:"Run Microsoft Test Engine (VSTest) commands."
+      ))'
+
+      'other-commands:other command:((
+        dev-certs\:"Create and manage development certificates."
+        fsi\:"Start F# Interactive / execute F# scripts."
+        sql-cache\:"SQL Server cache command-line tools."
+        user-secrets\:"Manage development user secrets."
+        watch\:"Start a file watcher that runs a command when files change."
+      ))'
+    ) expl
+
+    _alternative $subcmds
+    _description global-tools expl 'global tool';
+    compadd $expl - ${commands[(I)dotnet-?*]#dotnet-};;
+  (rest)
+    local args=( ${(@f)"$(dotnet complete ${(j" ")${(@qqq)${(Q)words[1, CURRENT - 1]}}}' ')"} )
+    local opts=( ${(M)args:#-*} ) expl
+    args=( ${args:|opts} )
+
+    _description options expl option
+    compadd $expl -a opts
+
+    _description argument-rest expl 'argument'
+    compadd $expl -a args;;
+}

@@ -1,0 +1,10 @@
+#compdef echo
+
+local opts=(
+  '-n[do not print a newline]'
+  '-e[enable escape sequences]'
+  '-E[disable escape sequences]'
+  '*: :_default'
+)
+
+_arguments -A '-*' $opts

@@ -1,0 +1,9 @@
+if [[ $1 == update ]] {
+  brew update
+  brew upgrade
+  brew cleanup -s --prune=all
+}
+
+if [[ $1 == dump ]] {
+  brew bundle dump --global --describe --force
+}

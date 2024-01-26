@@ -1,0 +1,3 @@
+__prompt-init
+zle reset-prompt
+zle -R

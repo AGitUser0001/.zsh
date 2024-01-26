@@ -1,0 +1,3 @@
+while { read -rkt } { }
+printf '\e[?1004h' > /dev/tty
+zle -U "$ZLE_PUSH"; ZLE_PUSH=''

@@ -1,0 +1,17 @@
+res=${${1:t}%.app}
+print $res
+if [[ -f ./$res ]] echo "shortcut: file already exists"
+cat > ./$res <<exit
+#! /bin/zsh
+/usr/bin/osascript -e 'tell application "Terminal" to set visible of front window to false'
+/usr/bin/open -- ${1:P}
+exit
+chmod +x ./$res
+if [[ $1 == *.app ]] {
+  icon=${1:P}/Contents/Resources/$(defaults read -- ${1:P}/Contents/Info.plist CFBundleIconFile).icns
+} else {
+  icon=$(mktemp shortcuticns.XXXXXXXX)
+  /opt/homebrew/bin/fileicon get -- $1:P $icon
+}
+/opt/homebrew/bin/fileicon set -- $res:P $icon
+if [[ $1 != *.app ]] rm $icon

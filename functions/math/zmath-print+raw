@@ -1,0 +1,2 @@
+eval $_default_setup
+print -r -- $(( $1 ))

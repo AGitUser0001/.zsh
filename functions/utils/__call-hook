@@ -1,0 +1,12 @@
+eval $_default_setup
+case $1 {
+  (-(-|)) $0 "${@:2}";;
+  (chpwd|precmd|preexec|periodic) ;&
+  (zshaddhistory|zshexit|zsh_directory_name)
+    private func
+    for func ( $1 "${(@P)${:-${1}_functions}}" ) (( $+functions[$func] )) && "$func"
+    return 0;;
+  (isearch-exit|isearch-update|line-pre-redraw|line-init) ;&
+  (line-finish|history-line-set|keymap-select) zle && (( $+widgets[zle-$1] )) && zle zle-$1;;
+  (*) return 1;;
+}

@@ -1,0 +1,2 @@
+xattr -cr -- "$1"
+codesign -fs - "$1"
