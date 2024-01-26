@@ -1,7 +1,7 @@
 if [[ $1 == update ]] {
   brew update
   brew upgrade
-  brew cleanup -s --prune=all
+  brew cleanup -s
 }
 
 if [[ $1 == dump ]] {
