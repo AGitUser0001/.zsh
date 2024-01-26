@@ -1,6 +1,6 @@
 #if unalias run-help
 run-help
-#if true
+#endif
 
 se=sudoedit
 sedit=sudoedit

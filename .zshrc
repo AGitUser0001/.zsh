@@ -51,10 +51,13 @@ autoload -Uz $fpath[1]/**/[!_]*(-N^/)
 read-definition-file $ZDOTDIR/define/definitions.zsh read-definition-file
 
 () {
-  local arg="-C"
-  mtree -k cksum -p $ZDOTDIR/functions/completion/ < $ZDOTDIR/.zcomphash &>/dev/null; (($? == 2)) && arg="-u";
+  local opts=(-C)
+  if [[ -r $ZDOTDIR/.zcomphash ]] {
+    mtree -k cksum -p $ZDOTDIR/functions/completion/ < $ZDOTDIR/.zcomphash &>/dev/null
+    if (( $? == 2 )) opts=(-u);
+  } else { opts=(-u) }
   mtree -ck cksum -p $ZDOTDIR/functions/completion/ > $ZDOTDIR/.zcomphash 2>/dev/null
-  compinit $arg && _evf $ZDOTDIR/comp.init.zsh
+  compinit $opts && _evf $ZDOTDIR/comp.init.zsh
 }
 
 () {

@@ -31,20 +31,23 @@ read-definition-file() {
   builtin emulate -LR zsh
   builtin setopt extended_glob
   case $# {
-    (0) builtin print 'Usage: read-definition-file <file> [command]'; builtin return 0;;
+    (0) builtin print 'Usage: read-definition-file <file> [<command>]'; builtin return 0;;
     (1) 2=$0;;
   }
   builtin local flags= if=true file=$1
   builtin shift
   while builtin read -r || [[ $REPLY ]] {
     case $REPLY {
-      (\#*) builtin local action=${REPLY##\#}
+      (\#*)
+      builtin local action="${REPLY##\#}"
+      builtin local data="${action##[^[:space:]]##[[:space:]]##}"
       case $action {
-        (flags[[:space:]]##*) flags=${action##flags( |$'\t')##};|
-        (if[[:space:]]##*) if=${action##if( |$'\t')##};|
+        (flags[[:space:]]##*) flags="$data";|
+        (if[[:space:]]##*) if="$data";|
+        (endif[[:space:]]#) if=true;|
       };;
       ('');;
-      (*) builtin eval $if '&&' "$@" $flags $REPLY;;
+      (*) if builtin eval "$if"; { builtin eval "$@" $flags $REPLY; };;
     }
   } < $file >/dev/null
 }
