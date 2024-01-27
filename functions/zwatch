@@ -1,10 +1,11 @@
 builtin emulate -LR zsh
-builtin zmodload zsh/zselect
+builtin zmodload zsh/zselect zsh/terminfo zsh/datetime zsh/mathfunc
+builtin enable shift continue source command eval zselect printf strftime
 
-builtin local seconds=2 print_header=1
+local seconds=2 print_header=1
 while [[ $1 == -[nt] ]] {
   if [[ $1 == -t ]] {
-    print_header=
+    print_header=0
     builtin shift
     builtin continue
   }
@@ -13,14 +14,28 @@ while [[ $1 == -[nt] ]] {
   builtin shift
 }
 
-builtin local centiseconds=$(( seconds*100 ))
+local centiseconds=$(( max(int(rint(seconds * 10) * 10), 10) ))
+local seconds=$(( float(centiseconds) / 100 ))
 
+local reply=(smcup)
+builtin source $ZDOTDIR/terminfo.zsh
 while (( 1 )) {
-  builtin print -n '\e[2J\e[H'
-  if [[ $print_header ]] {
-    builtin print -rn "Every ${seconds}s: ${(q-)@}"
-    builtin print "\t\t${(%):-%D %*}\n"
+  builtin command /bin/stty echo
+  local reply=(clear)
+  builtin source $ZDOTDIR/terminfo.zsh
+  if (( $print_header )) {
+    local fseconds='' date=''
+    builtin printf -v fseconds '%.1f' "$seconds"
+    local left="Every ${fseconds}s: $@"
+    builtin strftime -s date '%a %b %d %T %Y'
+    local right="$USER: $date"
+    builtin printf "%s%$(($COLUMNS-${#left}))s\n\n" "$left" "$right"
   }
   builtin eval "${(q-)@}"
+  local reply=('cup $LINES $COLUMNS')
+  builtin source $ZDOTDIR/terminfo.zsh
+  builtin command /bin/stty -echo
   builtin zselect -t $centiseconds
 }
+local reply=(rmcup)
+builtin source $ZDOTDIR/terminfo.zsh

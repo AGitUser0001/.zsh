@@ -2,7 +2,7 @@ trim() {
   builtin emulate -LR zsh
   builtin setopt extended_glob
   
-  builtin local text="$*"
+  local text="$*"
   if [[ $# -eq 0 ]] builtin read -rd '' text
 
   builtin printf %s ${${text%%[[:space:]]#}##[[:space:]]#}
@@ -10,19 +10,17 @@ trim() {
 
 clear() {
   builtin emulate -LR zsh
+  builtin zmodload zsh/terminfo
   builtin setopt extended_glob
 
-  if [[ $TERM == xterm(-*|) ]] {
-    builtin printf '\e[H\e[2J\e[3J'
-  } else {
-    builtin printf '\e[H\e[2J'
-  }
+  local reply=(clear E3)
+  builtin source $ZDOTDIR/terminfo.zsh
 }
 
 _log() {
   builtin emulate -LR zsh
   builtin zmodload zsh/parameter
-  builtin local name=${functrace[1]:-$ZSH_ARGZERO};
+  local name=${functrace[1]:-$ZSH_ARGZERO};
   if [[ $1 == -n ]] { builtin shift; name=$1; }
   builtin print -u0 -- "$name:<log>:" $@
 }
@@ -34,13 +32,13 @@ read-definition-file() {
     (0) builtin print 'Usage: read-definition-file <file> [<command>]'; builtin return 0;;
     (1) 2=$0;;
   }
-  builtin local flags= if=true file=$1
+  local flags= if=true file=$1
   builtin shift
   while builtin read -r || [[ $REPLY ]] {
     case $REPLY {
       (\#*)
-      builtin local action="${REPLY##\#}"
-      builtin local data="${action##[^[:space:]]##[[:space:]]##}"
+      local action="${REPLY##\#}"
+      local data="${action##[^[:space:]]##[[:space:]]##}"
       case $action {
         (flags[[:space:]]##*) flags="$data";|
         (if[[:space:]]##*) if="$data";|
@@ -55,7 +53,7 @@ read-definition-file() {
 _err() {
   builtin emulate -LR zsh
   builtin zmodload zsh/parameter
-  builtin local name=${functrace[1]:-$ZSH_ARGZERO}
+  local name=${functrace[1]:-$ZSH_ARGZERO}
   if [[ $1 == -n ]] { builtin shift; name=$1 }
   builtin print -u2 -- "$name:<err>:" $@
   builtin return 1

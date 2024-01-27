@@ -1,11 +1,10 @@
 eval $_default_setup
-__tty-avail || return
+__tty || return
 
 if [[ ! -t 1 ]] { $0 &> /dev/tty; return }
 /bin/stty -f /dev/tty sane
-printf '%s%s%s\e]0;%s\a\e]1;%s\a'                 \
-  $'\e[?1003l\e[?1004l\e[?9l'                     \
-  "$terminfo[cnorm]$terminfo[sgr0]"               \
-  "$terminfo[smam]$terminfo[sc]$terminfo[rmcup]"  \
-  "${TITLE//$'\a'/}" "${TAB_TITLE//$'\a'/}"       \
-  
+printf '%s\e]0;%s\a\e]1;%s\a'             \
+  $'\e[?1003l\e[?1004l\e[?9l'             \
+  "${TITLE//$'\a'/}" "${TAB_TITLE//$'\a'/}"
+local reply=(cnorm sgr0 smam sc rmcup)
+source $ZDOTDIR/terminfo.zsh

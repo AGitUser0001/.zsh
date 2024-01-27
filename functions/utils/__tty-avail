@@ -1,3 +1,0 @@
-eval $_default_setup
-() { : </dev/tty } &> /dev/null
-functions[$0]="return $?"; $0
