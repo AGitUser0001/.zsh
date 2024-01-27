@@ -50,15 +50,7 @@ autoload -Uz $fpath[1]/**/[!_]*(-N^/)
 
 read-definition-file $ZDOTDIR/define/definitions.zsh read-definition-file
 
-() {
-  local opts=(-C)
-  if [[ -r $ZDOTDIR/.zcomphash ]] {
-    mtree -k cksum -p $ZDOTDIR/functions/completion/ < $ZDOTDIR/.zcomphash &>/dev/null
-    if (( $? == 2 )) opts=(-u);
-  } else { opts=(-u) }
-  mtree -ck cksum -p $ZDOTDIR/functions/completion/ > $ZDOTDIR/.zcomphash 2>/dev/null
-  compinit $opts && _evf $ZDOTDIR/comp.init.zsh
-}
+compinit -u && _evf $ZDOTDIR/comp.init.zsh
 
 () {
   local fn
@@ -121,7 +113,7 @@ PROMPT2=$'%K{208}%F{black} $(
   eval $_default_setup
   printf %s ${${(j"  ")${${=${(%):-%_}}}}[1,-12]}
 ) $__nobg%F{208} %k%f%b%s'
-#RPROMPT=$'%(9V.%(?..$__nobg%F{red}%K{red}%f %? ).)'
+RPROMPT=$'%(9V.%(?..$__nobg%F{red}%K{red}%f %? ).)'
 
 _evf $HB_CNF_HANDLER
 
