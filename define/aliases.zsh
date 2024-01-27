@@ -1,7 +1,4 @@
-#if unalias run-help
-run-help
-#endif
-
+#exec unalias run-help
 se=sudoedit
 sedit=sudoedit
 sudoed=sudoedit

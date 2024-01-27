@@ -9,3 +9,4 @@ GPG_TTY=$TTY
 
 #if [[ $LESS != (* |)-([^ ]##|)r([^ ]##|)( *|) ]]
 LESS="$LESS -r"
+#endif

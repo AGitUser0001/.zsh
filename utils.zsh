@@ -43,6 +43,7 @@ read-definition-file() {
         (flags[[:space:]]##*) flags="$data";|
         (if[[:space:]]##*) if="$data";|
         (endif[[:space:]]#) if=true;|
+        (exec[[:space:]]##*) builtin eval "$data";|
       };;
       ('');;
       (*) if builtin eval "$if"; { builtin eval "$@" $flags $REPLY; };;
