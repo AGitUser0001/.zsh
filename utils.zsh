@@ -46,7 +46,7 @@ read-definition-file() {
       case $action {
         (flags[[:space:]]*) flags="$data";;
         (if[[:space:]]*) builtin eval "$data"; run=$?;;
-        (elif[[:space:]]*) if (( run != 0 )) { builtin eval "$data"; run=$? }; ;;
+        (elif[[:space:]]*) if (( run != 0 )) { builtin eval "$data"; run=$? } else { run=1 } ;;
         (else) if (( run == 0 )) { run=1 } else { run=0 };;   (fi) run=0;;
         (exec[[:space:]]*) if (( run == 0 )) { builtin eval "$data" }; ;;
       };;
