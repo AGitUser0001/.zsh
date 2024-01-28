@@ -27,9 +27,9 @@ fpath=( /opt/homebrew/share/zsh/site-functions /opt/homebrew/share/zsh/functions
 fpath=( /opt/homebrew/opt/curl/share/zsh/site-functions /opt/homebrew/share/zsh-completions $fpath)
 fpath=( $ZDOTDIR/functions $ZDOTDIR/functions/**(-/N) $fpath)
 
-__nobg="%k"
+BG="%k"
 #if [[ $TERM_PROGRAM == Apple_Terminal ]]
-__nobg="%K{233}"
+BG="%K{233}"
 #endif
 
 fpath[${fpath[(i)/usr/local/share/zsh/site-functions]}]=( )
