@@ -1,4 +1,4 @@
-eval $_default_setup
+builtin eval $SETUP
 
 if (( $1 < $2 )) {
   (( $2 ))

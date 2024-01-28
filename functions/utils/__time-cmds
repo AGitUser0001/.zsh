@@ -1,4 +1,4 @@
-eval $_default_setup
+builtin eval $SETUP
 
 _elapsed+=( $(( __lasttimestart >= 0 ? EPOCHREALTIME - __lasttimestart : 0.0 )) )
 __cmdran=$(( __lasttimestart >= 0 ))

@@ -1,2 +1,2 @@
-eval $_default_setup
+builtin eval $SETUP
 if [[ $PWD != ${:P} ]] cd ${:P};

@@ -1,4 +1,4 @@
-eval $_default_setup
+builtin eval $SETUP
 local -a match mbegin mend
 
 case $1 {

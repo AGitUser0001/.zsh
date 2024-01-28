@@ -1,10 +1,10 @@
-eval $_default_setup
+builtin eval $SETUP
 
 __time-cmds
 if (( __cmdran )) __reset
  
 eval -- $PROMPT_COMMAND
-eval $_default_setup
+builtin eval $SETUP
 while [[ ! -e ${:P} ]] cd ..
 if [[ $PWD != ${:P} ]] cd ${:P}
 

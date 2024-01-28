@@ -1,4 +1,4 @@
-eval $_default_setup
+builtin eval $SETUP
 case $1 {
   (-(-|)) $0 "${@:2}";;
   (chpwd|precmd|preexec|periodic) ;&
