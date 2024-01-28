@@ -1,6 +1,9 @@
 eval $_default_setup
 
 local curcontext=":*" git=( (../)#.git(N) )
+
+psvar[1]=( "${(%)BG}" )
+
 if [[ -n $git ]] {
   CURRENT_GIT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2> /dev/null)
 } else {
@@ -22,11 +25,11 @@ if [[ $CURRENT_GIT_BRANCH ]] {
   zstyle -s ":prompt:X$curcontext:"        symbol    symbol  || symbol=''
   zstyle -s ":prompt:X$curcontext:branch"  icon      branch  || branch=''
 
-  psvar[1,5]=( "$bgcolor" "$fgcolor" "${branch:+$branch }" "$CURRENT_GIT_BRANCH" "$symbol" )
+  psvar[2,6]=( "$bgcolor" "$fgcolor" "${branch:+$branch }" "$CURRENT_GIT_BRANCH" "$symbol" )
 
   curcontext=":*"
   unset fgcolor bgcolor branch symbol
-} else { psvar[1,5]=( "" "" "" "" "" ) }
+} else { psvar[2,6]=( "" "" "" "" "" ) }
 
 local fgcolor bgcolor
 local -F 1 diff=$_elapsed[-1]
@@ -35,7 +38,7 @@ curcontext="$curcontext:*"
 
 zstyle -s ":prompt:X$curcontext:" fgcolor fgcolor || fgcolor=black
 zstyle -s ":prompt:X$curcontext:" bgcolor bgcolor || bgcolor=214
-psvar[6,8]=( "$bgcolor" "$fgcolor" "$diff" )
+psvar[7,9]=( "$bgcolor" "$fgcolor" "$diff" )
 
 curcontext=":*"
 unset fgcolor bgcolor

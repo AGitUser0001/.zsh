@@ -3,8 +3,8 @@ eval $_default_setup
 _elapsed+=( $(( __lasttimestart >= 0 ? EPOCHREALTIME - __lasttimestart : 0.0 )) )
 __cmdran=$(( __lasttimestart >= 0 ))
 if (( __cmdran )) {
-  psvar[9]='y'
+  psvar[10]='y'
 } else {
-  psvar[9]=''
+  psvar[10]=''
 }
 (( __lasttimestart = -1 ))

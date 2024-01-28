@@ -48,14 +48,15 @@ WORDCHARS='*?'
 HELP_SKIPFUNC=( visudo purge )
 
 PROMPT_EOL_MARK='%k%f%b%s'
-PS1=$'%K{blue} %3~ %F{blue}%(4V"%K{%1v}%F{%2v} %B%3v%4v%5v%b %F{%1v}")%K{%6v}%F{%7v} %8vs $BG%F{%6v} %k%f%b%s%(#"%B%F{red}%#%b%f"%#) '
+PS1=$'%K{blue} %3~ %F{blue}%(5V"%K{%2v}%F{%3v} %B%4v%5v%6v%b %F{%2v}")%K{%7v}%F{%8v} %9vs %K{%1v}%F{%7v}%k%f%b%s %(#"%B%F{red}%#%b%f"%#) '
 PS2=$'%K{208}%F{black} $(
   eval $_default_setup
   printf %s ${${(j"  ")${${=${(%):-%_}}}}[1,-12]}
-) $BG%F{208} %k%f%b%s'
-PS3=$'%K{green}%F{black} ? $BG%F{green} %k%f%b%s'
-PS4='%K{red}%F{white} +%e %N:%i %D{.%6.}$BG%F{red} %k%f%b%s'
-RPS1=$'%(9V.%(?..$BG%F{red}%K{red}%f %? ).)'
+) %K{%1v}%F{208}%k%f%b%s %(#"%B%F{red}%#%b%f"%#) '
+PS3=$'%K{green}%F{black} ? %K{%1v}%F{green}%k%f%b%s '
+PS4='%K{red}%F{white} +%e %N:%i %D{.%6.}%K{%1v}%F{red}%k%f%b%s '
+RPS1=$'%(10V.%(?..%K{%1v}%F{red}%K{red}%f %? ).)'
+SPROMPT="%K{8} '%R' to '%r'  [n]o  [y]es  [a]bort  [e]dit %K{%1v}%F{8}%k%f%b%s "
 
 __reset
 

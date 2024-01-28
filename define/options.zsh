@@ -1,7 +1,11 @@
 interactive_comments chase_links
-extended_history hist_ignore_dups
 hist_fcntl_lock share_history notify
 ignore_eof c_bases octal_zeroes
-correct hist_verify
+correct hist_verify hist_no_store
 
-no_beep no_flow_control
+hist_reduce_blanks hist_lex_words
+hist_ignore_dups hist_ignore_all_dups
+hist_find_no_dups hist_save_no_dups
+extended_history hist_expire_dups_first
+
+no_beep no_flow_control no_bang_hist
