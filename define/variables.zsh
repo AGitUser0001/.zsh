@@ -15,7 +15,7 @@ path[${path[(i)/usr/bin]}]=( )
 path[${path[(i)/usr/sbin]}]=( )
 path[${path[(i)/usr/local/bin]}]=( )
 path[${path[(i)/Library/Apple/usr/bin]}]=( )
-#endif
+#fi
 
 path=( ~/.bin/applets $zsh_path_override ~/.bin ~/.dotnet/tools $path )
 path=( $path /opt/homebrew/opt/python/bin /opt/homebrew/bin /opt/homebrew/sbin )
@@ -30,7 +30,7 @@ fpath=( $ZDOTDIR/functions $ZDOTDIR/functions/**(-/N) $fpath)
 BG="%k"
 #if [[ $TERM_PROGRAM == Apple_Terminal ]]
 BG="%K{233}"
-#endif
+#fi
 
 fpath[${fpath[(i)/usr/local/share/zsh/site-functions]}]=( )
 

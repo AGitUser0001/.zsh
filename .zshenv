@@ -1,4 +1,4 @@
-PROMPT4='%F{red}+%e %N:%i %D{.%6.}> %f'
+PS4='%F{red}+%e %N:%i %D{.%6.}> %f'
 [[ -r $ZDOTDIR/utils.zsh ]] && source $ZDOTDIR/utils.zsh
 
 SHELL_SESSIONS_DISABLE=1

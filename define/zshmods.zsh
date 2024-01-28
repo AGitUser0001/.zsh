@@ -13,4 +13,4 @@ zsh/stat b:zstat
 
 #if [[ ! $COLORTERM = *(24bit|truecolor)* ]]
 zsh/nearcolor
-#endif
+#fi

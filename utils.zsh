@@ -26,8 +26,6 @@ _log() {
 }
 
 read-definition-file() {
-  builtin emulate -LR zsh
-  builtin setopt extended_glob
   case $# {
     (0) builtin print 'Usage: read-definition-file <file> [<command>]'; builtin return 0;;
     (1) 2=$0;;
@@ -38,12 +36,17 @@ read-definition-file() {
     case $command {
       (\#*)
       local action="${command##\#}"
-      local data="${action##[^[:space:]]##[[:space:]]##}"
+      if [[ -o extended_glob ]] {
+        local data="${action##[^[:space:]]##[[:space:]]##}"
+      } else {
+        setopt extended_glob
+        local data="${action##[^[:space:]]##[[:space:]]##}"
+        unsetopt extended_glob
+      }
       case $action {
-        (flags[[:space:]]##*) flags="$data";;
-        (if[[:space:]]##*) if="$data";;
-        (endif[[:space:]]#) if=true;;
-        (exec[[:space:]]##*) builtin eval "$data";;;
+        (flags[[:space:]]*) flags="$data";;
+        (if[[:space:]]*) if="$data";; (fi) if=true;;
+        (exec[[:space:]]*)  builtin eval "$if"; if (( $? == 0 )) { builtin eval "$data" }; ;;
       };;
       ('');;
       (*) builtin eval "$if"; if (( $? == 0 )) { builtin eval "$@" $flags $command; }; ;;

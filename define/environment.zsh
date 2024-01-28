@@ -8,8 +8,8 @@ GPG_TTY=$TTY
 
 #if [[ $LESS != (* |)-([^ ]##|)r([^ ]##|)( *|) ]]
 LESS="$LESS -r"
-#endif
+#fi
 
 #if [[ -z $HB_CNF_HANDLER ]]
 HB_CNF_HANDLER="/opt/homebrew/Library/Taps/homebrew/homebrew-command-not-found/handler.sh"
-#endif
+#fi
