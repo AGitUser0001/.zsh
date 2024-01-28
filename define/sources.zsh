@@ -3,7 +3,7 @@ $ZDOTDIR/zle.init.zsh
 $ZDOTDIR/zstyle.init.zsh
 
 #if compinit -C
-#exec compdump &!
+#exec compdump &|
 $ZDOTDIR/comp.init.zsh
 #fi
 
