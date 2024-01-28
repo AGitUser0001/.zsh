@@ -25,6 +25,7 @@ _elapsed=( )
 
 add-zsh-hook chpwd chpwd_recent_dirs
 add-zsh-hook -Uz zsh_directory_name zsh_directory_name_cdr
+
 () {
   local i
   for i ( $functions[(I)__?*] ) {
