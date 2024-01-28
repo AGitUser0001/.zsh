@@ -1,4 +1,6 @@
 #flags -Uz
+$fpath[1]/**/[!_]*(-N^/)
+$fpath[1]/**/__?*(-N^/)
 compinit
 add-zsh-hook
 add-zle-hook-widget
