@@ -7,4 +7,4 @@ if (( __cmdran )) {
 } else {
   psvar[10]=''
 }
-(( __lasttimestart = -1 ))
+__lasttimestart=-1
