@@ -1,7 +1,7 @@
 read-definition-file $ZDOTDIR/define/definitions.zsh read-definition-file
 
 if [[ ${:P} != $PWD ]] cd ${:P};
-while { read -rskt } { ZLE_PUSH+=$REPLY }
+zle-push
 
 () {
   local fn
@@ -61,5 +61,5 @@ SPROMPT="%K{8} '%R' to '%r'  [n]o  [y]es  [a]bort  [e]dit %K{%1v}%F{
 
 __reset
 
-while { read -rskt } { ZLE_PUSH+=$REPLY }
+zle-push
 true # $? == 0
