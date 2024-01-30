@@ -1,0 +1,8 @@
+if [[ $1 == -l ]] {
+  builtin shift;
+  if [[ $1 == -- ]] builtin shift;
+  time ZLE_PUSH=$'exit\n' login -pf "$USER" "$SHELL" "$@"
+} else {
+  if [[ $1 == -- ]] builtin shift;
+  time ZLE_PUSH=$'exit\n' "$SHELL" "$@"
+}
