@@ -1,4 +1,0 @@
-builtin emulate -LR zsh
-() { 
-  </dev/tty 
-} &> /dev/null

@@ -1,1 +1,1 @@
-* * * * * zsh -c 'autoload compinit; compinit -u'
+* * * * * zsh -lic 'compinit -u'

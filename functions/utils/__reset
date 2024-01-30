@@ -1,7 +1,6 @@
 builtin eval $SETUP
-__tty || return
 
-if [[ ! -t 1 ]] { $0 &> /dev/tty; return }
+if [[ ! -t 1 ]] return
 /bin/stty -f /dev/tty sane
 printf '%s\e]0;%s\a\e]1;%s\a'             \
   $'\e[?1003l\e[?1004l\e[?9l'             \
