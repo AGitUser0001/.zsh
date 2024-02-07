@@ -18,13 +18,13 @@ path[${path[(i)/Library/Apple/usr/bin]}]=( )
 #fi
 
 path=( ~/.bin/applets $zsh_path_override ~/.bin ~/.dotnet/tools $path )
-path=( $path /opt/homebrew/opt/python/bin /opt/homebrew/bin /opt/homebrew/sbin )
-path=( $path /opt/homebrew/opt/ruby/bin /opt/homebrew/opt/sqlite/bin /opt/homebrew/opt/curl/bin )
+path=( $path $HOMEBREW_PREFIX/opt/python/bin $HOMEBREW_PREFIX/bin $HOMEBREW_PREFIX/sbin )
+path=( $path $HOMEBREW_PREFIX/opt/ruby/bin $HOMEBREW_PREFIX/opt/sqlite/bin $HOMEBREW_PREFIX/opt/curl/bin )
 path=( $path /Library/Apple/usr/bin /usr/local/bin /usr/bin /bin /usr/sbin /sbin )
 path=( $path /Library/Frameworks/Mono.framework/Versions/Current/Commands )
 
-fpath=( /opt/homebrew/share/zsh/site-functions /opt/homebrew/share/zsh/functions $fpath )
-fpath=( /opt/homebrew/opt/curl/share/zsh/site-functions /opt/homebrew/share/zsh-completions $fpath)
+fpath=( $HOMEBREW_PREFIX/share/zsh/site-functions $HOMEBREW_PREFIX/share/zsh/functions $fpath )
+fpath=( $HOMEBREW_PREFIX/opt/curl/share/zsh/site-functions $HOMEBREW_PREFIX/share/zsh-completions $fpath)
 fpath=( $ZDOTDIR/functions $ZDOTDIR/functions/**(-/N) $fpath)
 
 #if [[ $TERM_PROGRAM == Apple_Terminal ]]
@@ -35,4 +35,4 @@ BG="none"
 
 fpath[${fpath[(i)/usr/local/share/zsh/site-functions]}]=( )
 
-module_path=( $module_path /opt/homebrew/lib/zsh )
+module_path=( $module_path $HOMEBREW_PREFIX/lib/zsh )

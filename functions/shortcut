@@ -11,7 +11,7 @@ if [[ $1 == *.app ]] {
   icon=${1:P}/Contents/Resources/$(defaults read -- ${1:P}/Contents/Info.plist CFBundleIconFile).icns
 } else {
   icon=$(mktemp shortcuticns.XXXXXXXX)
-  /opt/homebrew/bin/fileicon get -- $1:P $icon
+  $HOMEBREW_PREFIX/bin/fileicon get -- $1:P $icon
 }
-/opt/homebrew/bin/fileicon set -- $res:P $icon
+$HOMEBREW_PREFIX/bin/fileicon set -- $res:P $icon
 if [[ $1 != *.app ]] rm $icon
