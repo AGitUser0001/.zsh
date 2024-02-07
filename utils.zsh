@@ -30,7 +30,7 @@ read-definition-file() {
     (0) builtin print 'Usage: read-definition-file <file> [<command>]'; builtin return 0;;
     (1) 2=$0;;
   }
-  local flags= run=0 command= file=$1 REPLY= reply=
+  local flags= stack=() command= file=$1 REPLY= reply=
   builtin shift
   while builtin read -r command || [[ $command ]] {
     case $command {
@@ -45,15 +45,15 @@ read-definition-file() {
       }
       case $action {
         (flags[[:space:]]*) flags="$data";;
-        (if[[:space:]]*) builtin eval "$data"; run=$?;;
-        (elif[[:space:]]*) if (( run != 0 )) { builtin eval "$data"; run=$? } else { run=1 } ;;
-        (else) if (( run == 0 )) { run=1 } else { run=0 };;   (fi) run=0;;
-        (exec[[:space:]]*) if (( run == 0 )) { builtin eval "$data" }; ;;
+        (if[[:space:]]*) builtin eval "$data"; stack+=$((!?));;
+        (elif[[:space:]]*) if (( stack[-1] )) { builtin eval "$data"; stack[-1]=$((!?)) } else { stack[-1]=0 } ;;
+        (else) stack[-1]=$(( !stack[-1] ));; (fi) shift -p stack;;
+        (exec[[:space:]]*) if (( $#stack == 0 || stack[-1] )) { builtin eval "$data" }; ;;
       };;
       ('');;
-      (*) if (( run == 0 )) { builtin eval "$@" $flags $command; }; ;;
+      (*) if (( $#stack == 0 || stack[-1] )) { builtin eval "$@" $flags $command; }; ;;
     }
-  } < $file >/dev/null
+  } < $file
 }
 
 _err() {

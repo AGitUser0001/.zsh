@@ -28,9 +28,9 @@ fpath=( $HOMEBREW_PREFIX/opt/curl/share/zsh/site-functions $HOMEBREW_PREFIX/shar
 fpath=( $ZDOTDIR/functions $ZDOTDIR/functions/**(-/N) $fpath)
 
 #if [[ $TERM_PROGRAM == Apple_Terminal ]]
-BG="233"
+BG="233";
 #else
-BG="none"
+BG="none";
 #fi
 
 fpath[${fpath[(i)/usr/local/share/zsh/site-functions]}]=( )
