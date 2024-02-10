@@ -1,5 +1,5 @@
 builtin emulate -LR zsh
-builtin zmodload zsh/zselect zsh/terminfo zsh/datetime zsh/mathfunc
+builtin zmodload zsh/zselect zsh/datetime zsh/mathfunc
 builtin enable shift continue source command eval zselect printf strftime
 
 local seconds=2 print_header=1
