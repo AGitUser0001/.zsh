@@ -46,7 +46,6 @@ CURRENT_GIT_BRANCH=''
 TITLE=''
 TAB_TITLE=''
 WORDCHARS='*?'
-HELP_SKIPFUNC=( visudo purge )
 
 PROMPT_EOL_MARK='%k%f%b%s'
 PS1=$'%K{blue} %3~ %F{blue}%(5V"%K{%2v}%F{%3v} %B%4v%5v%6v%b %F{%2v}")%K{%7v}%F{%8v} %9vs %K{%1v}%F{%7v}%k%f%b%s %(#"%B%F{red}%#%b%f"%#) '
@@ -57,7 +56,7 @@ PS2=$'%K{208}%F{black} $(
 PS3=$'%K{green}%F{black} ? %K{%1v}%F{green}%k%f%b%s '
 PS4='%K{red}%F{white} %e %N:%i %D{.%6.} %K{%1v}%F{red}%k%f%b%s '
 RPS1=$'%(10V.%(?..%K{%1v}%F{red}%K{red}%f %? ).)'
-SPROMPT="%K{8} '%R' to '%r'  [n]o  [y]es  [a]bort  [e]dit %K{%1v}%F{8}%k%f%b%s "
+SPROMPT="%K{8} '%R' to '%r'  [n]o  yes  abort  edit %K{%1v}%F{8}%k%f%b%s "
 
 __reset
 

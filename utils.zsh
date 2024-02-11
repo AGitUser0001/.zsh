@@ -12,7 +12,7 @@ clear() {
   builtin emulate -LR zsh
   builtin setopt extended_glob
 
-  local reply=(E3 clear E3)
+  local reply=(clear E3)
   builtin source $ZDOTDIR/terminfo.zsh
 }
 
