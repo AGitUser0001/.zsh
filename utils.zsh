@@ -39,7 +39,7 @@ read-definition-file() {
   }
   local flags= stack=() command= file=$1 REPLY= reply=
   builtin shift
-  while builtin read -r command || [[ $command ]] {
+  while builtin read command || [[ $command ]] {
     case $command {
       (\#*)
       local action="${command##\#}"

@@ -5,27 +5,25 @@ SETUP='builtin emulate -LR zsh; builtin setopt extended_glob magic_equal_subst b
 USER_ZDOTDIR=$ZDOTDIR
 
 +x ZLE_PUSH="$ZLE_PUSH"
--xT ZSH_PATH_OVERRIDE zsh_path_override
+-xT ZSH_PATH zsh_path
 -U path fpath cdpath module_path PATH FPATH CDPATH MODULE_PATH
 
-#if [[ -o login && $ZSH_IGNORE_LOGIN != 1 ]]
 path[${path[(i)/bin]}]=( )
 path[${path[(i)/sbin]}]=( )
 path[${path[(i)/usr/bin]}]=( )
 path[${path[(i)/usr/sbin]}]=( )
 path[${path[(i)/usr/local/bin]}]=( )
 path[${path[(i)/Library/Apple/usr/bin]}]=( )
-#fi
 
-path=( ~/.bin/applets $zsh_path_override ~/.bin ~/.dotnet/tools $path )
-path=( $path $HOMEBREW_PREFIX/opt/python/bin $HOMEBREW_PREFIX/bin $HOMEBREW_PREFIX/sbin )
-path=( $path $HOMEBREW_PREFIX/opt/ruby/bin $HOMEBREW_PREFIX/opt/sqlite/bin $HOMEBREW_PREFIX/opt/curl/bin )
-path=( $path /Library/Apple/usr/bin /usr/local/bin /usr/bin /bin /usr/sbin /sbin )
-path=( $path /Library/Frameworks/Mono.framework/Versions/Current/Commands )
+path=( $zpath ~/.bin/applets ~/.bin ~/.dotnet/tools $path \
+       $HOMEBREW_PREFIX/opt/python/bin $HOMEBREW_PREFIX/bin $HOMEBREW_PREFIX/sbin \
+       $HOMEBREW_PREFIX/opt/ruby/bin $HOMEBREW_PREFIX/opt/sqlite/bin $HOMEBREW_PREFIX/opt/curl/bin \
+       /Library/Apple/usr/bin /usr/local/bin /usr/bin /bin /usr/sbin /sbin \
+       /Library/Frameworks/Mono.framework/Versions/Current/Commands )
 
-fpath=( $HOMEBREW_PREFIX/share/zsh/site-functions $HOMEBREW_PREFIX/share/zsh/functions $fpath )
-fpath=( $HOMEBREW_PREFIX/opt/curl/share/zsh/site-functions $HOMEBREW_PREFIX/share/zsh-completions $fpath)
-fpath=( $ZDOTDIR/functions $ZDOTDIR/functions/**(-/N) $fpath)
+fpath=( $ZDOTDIR/functions $ZDOTDIR/functions/**(-/N) \
+        $HOMEBREW_PREFIX/opt/curl/share/zsh/site-functions $HOMEBREW_PREFIX/share/zsh-completions \
+        $HOMEBREW_PREFIX/share/zsh/site-functions $HOMEBREW_PREFIX/share/zsh/functions $fpath )
 
 #if [[ $TERM_PROGRAM == Apple_Terminal ]]
 BG="233";
