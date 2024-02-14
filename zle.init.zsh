@@ -7,9 +7,6 @@ zle -A emacs-forward-word forward-word
     [[ $functions_source[$i] == $fpath[1]/zle/(*/|)--?* ]] && zle -N -- "${i#--}" "$i"
   }
 
-  local del=( '^Q' '^S' )
-  bindkey "${(ps"\xFF")${(pj"\xFFblank-key\xFF")del}}" blank-key
-
   local map=(
     # command line help
     '^[H'             run-help            '^[h'         run-help
