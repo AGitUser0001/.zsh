@@ -1,2 +1,2 @@
+builtin eval $SETUP
 [[ $BUFFER != [[:space:]]# ]] && __reset
-while { read -rskt } { }
