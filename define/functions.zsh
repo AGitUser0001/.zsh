@@ -11,3 +11,5 @@ chpwd_recent_dirs
 cdr
 zsh_directory_name_cdr
 zargs
+throw
+catch
