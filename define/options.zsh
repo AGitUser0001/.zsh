@@ -6,6 +6,7 @@ correct hist_verify hist_no_store
 hist_reduce_blanks hist_lex_words
 hist_ignore_dups hist_ignore_all_dups
 hist_find_no_dups hist_save_no_dups
-extended_history hist_expire_dups_first
+hist_no_store hist_expire_dups_first
+extended_history
 
 no_beep no_flow_control no_bang_hist
