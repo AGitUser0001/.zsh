@@ -1,4 +1,5 @@
 trim() {
+  builtin enable emulate setopt read printf
   builtin emulate -LR zsh
   builtin setopt extended_glob
   
@@ -9,6 +10,7 @@ trim() {
 }
 
 clear() {
+  builtin enable emulate setopt source
   builtin emulate -LR zsh
   builtin setopt extended_glob
 
@@ -17,6 +19,7 @@ clear() {
 }
 
 erase() {
+  builtin enable emulate setopt source
   builtin emulate -LR zsh
   builtin setopt extended_glob
 
@@ -25,8 +28,9 @@ erase() {
 }
 
 read-definition-file() {
+  builtin enable print return shift read setopt eval
   case $# {
-    (0) builtin print 'Usage: read-definition-file <file> [<command>]'; builtin return 0;;
+    (0) builtin print -u2 'Usage: read-definition-file <file> [<command>]'; builtin return 1;;
     (1) 2=$0;;
   }
   local flags= stack=() command= file=$1 REPLY= reply=
@@ -38,15 +42,15 @@ read-definition-file() {
       if [[ -o extended_glob ]] {
         local data="${action##[^[:space:]]##[[:space:]]##}"
       } else {
-        setopt extended_glob
+        builtin setopt extended_glob
         local data="${action##[^[:space:]]##[[:space:]]##}"
-        unsetopt extended_glob
+        builtin setopt no_extended_glob
       }
       case $action {
         (flags[[:space:]]*) flags="$data";;
         (if[[:space:]]*) builtin eval "$data"; stack+=$((!?));;
         (elif[[:space:]]*) if (( stack[-1] )) { builtin eval "$data"; stack[-1]=$((!?)) } else { stack[-1]=0 } ;;
-        (else) stack[-1]=$(( !stack[-1] ));; (fi) shift -p stack;;
+        (else) stack[-1]=$(( !stack[-1] ));; (fi) builtin shift -p stack;;
         (exec[[:space:]]*) if (( $#stack == 0 || stack[-1] )) { builtin eval "$data" }; ;;
       };;
       ('');;
