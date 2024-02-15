@@ -15,20 +15,18 @@ path[${path[(i)/usr/sbin]}]=( )
 path[${path[(i)/usr/local/bin]}]=( )
 path[${path[(i)/Library/Apple/usr/bin]}]=( )
 
-path=( $zpath ~/.bin/applets ~/.bin ~/.dotnet/tools $path \
-       $HOMEBREW_PREFIX/opt/python/bin $HOMEBREW_PREFIX/bin $HOMEBREW_PREFIX/sbin \
-       $HOMEBREW_PREFIX/opt/ruby/bin $HOMEBREW_PREFIX/opt/sqlite/bin $HOMEBREW_PREFIX/opt/curl/bin \
-       /Library/Apple/usr/bin /usr/local/bin /usr/bin /bin /usr/sbin /sbin \
-       /Library/Frameworks/Mono.framework/Versions/Current/Commands )
+path=( $zpath ~/.bin/applets ~/.bin ~/.dotnet/tools $path $HOMEBREW_PREFIX/opt/python/bin $HOMEBREW_PREFIX/bin $HOMEBREW_PREFIX/sbin $HOMEBREW_PREFIX/opt/ruby/bin $HOMEBREW_PREFIX/opt/sqlite/bin $HOMEBREW_PREFIX/opt/curl/bin /Library/Apple/usr/bin /usr/local/bin /usr/bin /bin /usr/sbin /sbin /Library/Frameworks/Mono.framework/Versions/Current/Commands )
 
-fpath=( $ZDOTDIR/functions $ZDOTDIR/functions/**(-/N) \
-        $HOMEBREW_PREFIX/opt/curl/share/zsh/site-functions $HOMEBREW_PREFIX/share/zsh-completions \
-        $HOMEBREW_PREFIX/share/zsh/site-functions $HOMEBREW_PREFIX/share/zsh/functions $fpath )
+fpath=( $ZDOTDIR/functions $ZDOTDIR/functions/**(-/N) $HOMEBREW_PREFIX/opt/curl/share/zsh/site-functions $HOMEBREW_PREFIX/share/zsh-completions $HOMEBREW_PREFIX/share/zsh/site-functions $HOMEBREW_PREFIX/share/zsh/functions $fpath )
 
-#if [[ $TERM_PROGRAM == Apple_Terminal ]]
-BG="233";
+#if [[ -t 1 ]]
+#if [[ $TERM_PROGRAM == "vscode" ]]
+#exec printf '\e]11;?\a'; read -rsd $'\\' < /dev/tty;
+BG=$REPLY$'\\'
 #else
-BG="none";
+#exec printf '\e]11;?\a'; read -rsd $'\a' < /dev/tty;
+BG=$REPLY$'\a'
+#fi
 #fi
 
 fpath[${fpath[(i)/usr/local/share/zsh/site-functions]}]=( )

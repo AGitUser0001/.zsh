@@ -35,7 +35,7 @@ read-definition-file() {
   }
   local flags= stack=() command= file=$1 REPLY= reply=
   builtin shift
-  while builtin read command || [[ $command ]] {
+  while builtin read -r command || [[ $command ]] {
     case $command {
       (\#*)
       local action="${command##\#}"
@@ -48,13 +48,13 @@ read-definition-file() {
       }
       case $action {
         (flags[[:space:]]*) flags="$data";;
-        (if[[:space:]]*) builtin eval "$data"; stack+=$((!?));;
-        (elif[[:space:]]*) if (( stack[-1] )) { builtin eval "$data"; stack[-1]=$((!?)) } else { stack[-1]=0 } ;;
+        (if[[:space:]]*) builtin eval "$data"; stack+=$?;;
+        (elif[[:space:]]*) if (( stack[-1] )) { builtin eval "$data"; stack[-1]=$? } else { stack[-1]=0 } ;;
         (else) stack[-1]=$(( !stack[-1] ));; (fi) builtin shift -p stack;;
-        (exec[[:space:]]*) if (( $#stack == 0 || stack[-1] )) { builtin eval "$data" }; ;;
+        (exec[[:space:]]*) if (( 0${(j"")stack} == 0 )) { builtin eval "$data" }; ;;
       };;
       ('');;
-      (*) if (( $#stack == 0 || stack[-1] )) { builtin eval "$@" $flags $command; }; ;;
+      (*) if (( 0${(j"")stack} == 0 )) { builtin eval "$@" $flags $command; }; ;;
     }
   } < $file
 }
