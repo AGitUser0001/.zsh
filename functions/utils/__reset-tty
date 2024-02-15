@@ -1,0 +1,6 @@
+builtin eval $SETUP
+
+if [[ ! -t 1 ]] return
+builtin ttyctl -u
+/bin/stty -f /dev/tty sane
+builtin ttyctl -f

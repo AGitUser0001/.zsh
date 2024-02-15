@@ -1,9 +1,8 @@
 builtin eval $SETUP
 
 if [[ ! -t 1 ]] return
-/bin/stty -f /dev/tty sane
-printf '%s\e]0;%s\a\e]1;%s\a'             \
+builtin printf '%s\e]0;%s\a\e]1;%s\a'     \
   $'\e[?1003l\e[?1004l\e[?9l'             \
   "${TITLE//$'\a'/}" "${TAB_TITLE//$'\a'/}"
 local reply=(cnorm sgr0 smam sc rmcup)
-source $ZDOTDIR/terminfo.zsh
+builtin source $ZDOTDIR/terminfo.zsh
