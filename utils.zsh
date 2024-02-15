@@ -24,14 +24,6 @@ erase() {
   builtin source $ZDOTDIR/terminfo.zsh
 }
 
-_log() {
-  builtin emulate -LR zsh
-  builtin zmodload zsh/parameter
-  local name=${functrace[1]:-$ZSH_ARGZERO};
-  if [[ $1 == -n ]] { builtin shift; name=$1; }
-  builtin print -u0 -- "$name:<log>:" $@
-}
-
 read-definition-file() {
   case $# {
     (0) builtin print 'Usage: read-definition-file <file> [<command>]'; builtin return 0;;
@@ -61,15 +53,6 @@ read-definition-file() {
       (*) if (( $#stack == 0 || stack[-1] )) { builtin eval "$@" $flags $command; }; ;;
     }
   } < $file
-}
-
-_err() {
-  builtin emulate -LR zsh
-  builtin zmodload zsh/parameter
-  local name=${functrace[1]:-$ZSH_ARGZERO}
-  if [[ $1 == -n ]] { builtin shift; name=$1 }
-  builtin print -u2 -- "$name:<err>:" $@
-  builtin return 1
 }
 
 _evf() {

@@ -66,15 +66,15 @@ zle -A emacs-forward-word forward-word
       (-[q]) q=\& l[-1]=( );;
       (-[p])
         if (( ! o[-r] )) {
-          _err not valid in this context: $i
+          builtin print -u2 not valid in this context: $i
           j=2 l=( )
         }
         ;;
       (-[lLdDANm])
-        _err not valid in this context: $i
+        builtin print -u2 not valid in this context: $i
         j=2 l=( );;
       (*)
-        _err bad option: $i
+        builtin print -u2 bad option: $i
         j=2 l=( );;
     }
 
