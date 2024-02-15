@@ -54,7 +54,3 @@ read-definition-file() {
     }
   } < $file
 }
-
-_evf() {
-  [[ -r $1 ]] && builtin source $1
-}
