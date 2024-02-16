@@ -37,6 +37,7 @@ read-definition-file() {
   builtin shift
   while builtin read -r command || [[ $command ]] {
     case $command {
+      ('');;
       (\#*)
       local action="${command##\#}"
       if [[ -o extended_glob ]] {
@@ -53,7 +54,6 @@ read-definition-file() {
         (else) stack[-1]=$(( !stack[-1] ));; (fi) builtin shift -p stack;;
         (exec[[:space:]]*) if (( 0${(j"")stack} == 0 )) { builtin eval "$data" }; ;;
       };;
-      ('');;
       (*) if (( 0${(j"")stack} == 0 )) { builtin eval "$@" $flags $command; }; ;;
     }
   } < $file

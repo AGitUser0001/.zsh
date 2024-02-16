@@ -50,15 +50,15 @@ TAB_TITLE=''
 WORDCHARS='*?'
 
 PROMPT_EOL_MARK='%k%f%b%s'
-PS1=$'%K{blue} %3~ %F{blue}%(5V"%K{%2v}%F{%3v} %B%4v%5v%6v%b %F{%2v}")%K{%7v}%F{%8v} %9vs %(1V"%K{%1v}"%k)%F{%7v}%k%f%b%s %(#"%B%F{red}%#%b%f"%#) '
+PS1=$'%K{blue} %3~ %F{blue}%(4V"%K{%1v}%F{%2v} %B%3v%4v%5v%b %F{%1v}")%K{%6v}%F{%7v} %8vs %k%f%b%s %(#"%B%F{red}%#%b%f"%#) '
 PS2=$'%K{208}%F{black} $(
   builtin eval $SETUP
   printf %s ${${(j"  ")${${=${(%):-%_}}}}[1,-12]}
-) %(1V"%K{%1v}"%k)%F{208}%k%f%b%s %(#"%B%F{red}%#%b%f"%#) '
-PS3=$'%K{green}%F{black} ? %(1V"%K{%1v}"%k)%F{green}%k%f%b%s '
-PS4='%K{red}%F{white} %e %N:%i %D{.%6.} %(1V"%K{%1v}"%k)%F{red}%k%f%b%s '
-RPS1=$'%(10V.%(?..%(1V"%K{%1v}"%k)%F{red}%K{red}%f %? ).)'
-SPROMPT="%K{8} '%R' to '%r'  [n]o  yes  abort  edit %(1V"%K{%1v}"%k)%F{8}%k%f%b%s "
+) %k%f%b%s %(#"%B%F{red}%#%b%f"%#) '
+PS3=$'%K{green}%F{black} ? %k%f%b%s '
+PS4='%K{red}%F{white} %e %N:%i %D{.%6.} %k%f%b%s '
+RPS1=$'%(9V.%(?..%K{red}%f %? ).)'
+SPROMPT="%K{8} '%R' to '%r'  [n]o  yes  abort  edit %k%f%b%s "
 
 __reset
 
