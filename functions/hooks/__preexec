@@ -1,1 +1,1 @@
-(( __lasttimestart = EPOCHREALTIME ))
+(( LASTCMDSTART = EPOCHREALTIME ))

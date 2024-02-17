@@ -22,8 +22,8 @@ zle-push
   }
 }
 
-__lasttimestart=-1
-_elapsed=( )
+LASTCMDSTART=-1
+elapsed=( )
 
 add-zsh-hook chpwd chpwd_recent_dirs
 add-zsh-hook -Uz zsh_directory_name zsh_directory_name_cdr

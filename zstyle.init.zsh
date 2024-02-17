@@ -9,6 +9,8 @@ zstyle+ ':completion:*'           insert-tab        false                       
       + ':messages'               format            '%d'                                        \
       + ':warnings'               format            'No matches for: %d'                        \
       + ':prefix:*'               add-space         true                                        \
-      + ':descriptions'           format            '%B%d%b'
+      + ':descriptions'           format            '%B%d%b'                                    \
+      + ''                        list-colors       "${(s.:.)LS_COLORS}"                        \
+      + ''                        special-dirs      true                                        \
 
 zstyle  ':prompt:X:git:*:dirty:'  symbol            '*'

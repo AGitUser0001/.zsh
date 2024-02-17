@@ -1,7 +1,7 @@
 builtin eval $SETUP
 
 __time-cmds
-if (( __cmdran )) __reset
+if (( CMDRAN )) __reset
  
 eval -- $PROMPT_COMMAND
 builtin eval $SETUP

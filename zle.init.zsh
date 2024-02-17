@@ -42,6 +42,8 @@ zle -A emacs-forward-word forward-word
     -q -M menuselect  '^[[5~'             backward-word
     -q -M menuselect  '^[[Z'              reverse-menu-complete
     -q -M menuselect  '^['                send-break
+    -q -M menuselect  '^[[I'              redisplay
+    -q -M menuselect  '^[[O'              redisplay
   )
 
   (( $+widgets[zle-focus] ))  ||  map+=( '^[[I' blank-key )

@@ -1,2 +1,3 @@
 builtin eval $SETUP
 [[ $BUFFER != [[:space:]]# ]] && __reset
+__CHECKEDTIME=0

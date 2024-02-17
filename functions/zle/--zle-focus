@@ -1,3 +1,2 @@
-__prompt-init
+__call-hook precmd
 zle reset-prompt
-zle -R
