@@ -20,8 +20,8 @@ if [[ $CURRENT_GIT_BRANCH ]] {
 
   zstyle -s ":prompt:X$curcontext:"        fgcolour   fgcolour || fgcolour=white
   zstyle -s ":prompt:X$curcontext:"        bgcolour   bgcolour || bgcolour=238
-  zstyle -s ":prompt:X$curcontext:"        symbol    symbol  || symbol=''
-  zstyle -s ":prompt:X$curcontext:branch"  icon      branch  || branch=''
+  zstyle -s ":prompt:X$curcontext:"        symbol     symbol   || symbol=''
+  zstyle -s ":prompt:X$curcontext:branch"  icon       branch   || branch=''
 
   psvar[1,5]=( "$bgcolour" "$fgcolour" "${branch:+$branch }" "$CURRENT_GIT_BRANCH" "$symbol" )
 

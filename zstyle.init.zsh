@@ -13,4 +13,4 @@ zstyle+ ':completion:*'           insert-tab        false                       
       + ''                        list-colors       "${(s.:.)LS_COLORS}"                        \
       + ''                        special-dirs      true                                        \
 
-zstyle  ':prompt:X:git:*:dirty:'  symbol            '*'
+zstyle  ':prompt:X:git:*:dirty:*' symbol            '*'

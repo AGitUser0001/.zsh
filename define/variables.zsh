@@ -11,6 +11,7 @@ USER_ZDOTDIR=$ZDOTDIR
 #if (( precmd_functions[(I)update_terminal_cwd] ))
 precmd_functions[(I)update_terminal_cwd]=( )
 chpwd_functions=( $chpwd_functions update_terminal_cwd )
+#exec update_terminal_cwd
 #fi
 
 #exec /usr/libexec/path_helper -s | source /dev/stdin
