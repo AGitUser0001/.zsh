@@ -5,8 +5,8 @@ if (( CMDRAN )) __reset
  
 eval -- $PROMPT_COMMAND
 builtin eval $SETUP
-while [[ ! -e ${:P} ]] cd ..
-if [[ $PWD != ${:P} ]] cd ${:P}
+while [[ ! -d ${:P} ]] cd .. 2>/dev/null
+if [[ $PWD != ${:P} && -d ${:P} ]] cd ${:P}
 
 __prompt-init
 

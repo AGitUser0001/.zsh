@@ -1,2 +1,2 @@
 builtin eval $SETUP
-if [[ $PWD != ${:P} ]] cd ${:P};
+if [[ $PWD != ${:P} && -d ${:P} ]] cd ${:P};
