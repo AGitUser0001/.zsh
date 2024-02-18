@@ -8,6 +8,11 @@ USER_ZDOTDIR=$ZDOTDIR
 -xT ZSH_PATH zsh_path
 -U path fpath cdpath module_path PATH FPATH CDPATH MODULE_PATH
 
+#if (( precmd_functions[(I)update_terminal_cwd] ))
+precmd_functions[(I)update_terminal_cwd]=( )
+chpwd_functions=( $chpwd_functions update_terminal_cwd )
+#fi
+
 #exec /usr/libexec/path_helper -s | source /dev/stdin
 path=( $zpath $path )
 
