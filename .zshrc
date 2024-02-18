@@ -47,7 +47,7 @@ WORDCHARS='*?'
 
 PS1=$'%K{blue} %3~ %F{blue}%(4V"%K{%1v}%F{%2v} %B%3v%4v%5v%b %F{%1v}")%K{%6v}%F{%7v} %8vs %k%f%b%s %(#"%B%F{red}%#%b%f"%#) '
 PS2=$'%K{208}%F{black} $(
-  builtin eval $SETUP
+  builtin eval "$SETUP"
   printf %s ${${(j"  ")${${=${(%):-%_}}}}[1,-12]}
 ) %k%f%b%s %(#"%B%F{red}%#%b%f"%#) '
 PS3=$'%K{green}%F{black} ? %k%f%b%s '

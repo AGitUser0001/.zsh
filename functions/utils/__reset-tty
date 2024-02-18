@@ -1,4 +1,4 @@
-builtin eval $SETUP
+builtin eval "$SETUP"
 
 if [[ ! -t 1 ]] return
 builtin ttyctl -u

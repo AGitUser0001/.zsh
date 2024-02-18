@@ -1,4 +1,4 @@
-builtin eval $SETUP
+builtin eval "$SETUP"
 
 if [[ ! -t 1 ]] return
 builtin printf '%s\e]0;%s\a\e]1;%s\a'     \

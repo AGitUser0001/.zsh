@@ -1,4 +1,4 @@
-builtin eval $SETUP
+builtin eval "$SETUP"
 local i j k
 
 for (( i = 1, j = $1, k = j; i <= $#; j = argv[++i] )) (( j > k && ( k = j ) ))

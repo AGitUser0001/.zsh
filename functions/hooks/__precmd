@@ -1,10 +1,10 @@
-builtin eval $SETUP
+builtin eval "$SETUP"
 
 __time-cmds
 if (( CMDRAN )) __reset
  
 eval -- $PROMPT_COMMAND
-builtin eval $SETUP
+builtin eval "$SETUP"
 while [[ ! -d ${:P} && ! ( -e "${${PWD:P}%/*}" && ! -r "${${PWD:P}%/*}" ) ]] cd "${${PWD:P}%/*}" &>/dev/null
 if [[ $PWD != ${:P} && -d ${:P} ]] cd ${:P} &>/dev/null
 

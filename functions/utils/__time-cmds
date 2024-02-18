@@ -1,4 +1,4 @@
-builtin eval $SETUP
+builtin eval "$SETUP"
 if (( ! __CHECKEDTIME )) {
   elapsed+=( $(( LASTCMDSTART >= 0 ? EPOCHREALTIME - LASTCMDSTART : 0.0 )) )
   CMDRAN=$(( LASTCMDSTART >= 0 ))

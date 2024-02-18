@@ -5,7 +5,8 @@ typeset -x ZPATH PATH FPATH CDPATH MODULE_PATH
 typeset -U zpath path fpath cdpath module_path ZPATH PATH FPATH CDPATH MODULE_PATH
 typeset -T ZPATH zpath
 
-setopt extended_glob magic_equal_subst bsd_echo glob_star_short prompt_subst brace_ccl
+SETUP='builtin emulate -LR zsh; builtin setopt extended_glob magic_equal_subst bsd_echo glob_star_short prompt_subst brace_ccl rematch_pcre combining_chars;'
+builtin eval "${SETUP#*;}";
 export PATH FPATH CDPATH MODULE_PATH
 export CPPFLAGS='-I/opt/homebrew/opt/openjdk/include'
 

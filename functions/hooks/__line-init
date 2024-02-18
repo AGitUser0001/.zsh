@@ -1,4 +1,4 @@
-builtin eval $SETUP
+builtin eval "$SETUP"
 printf '\e[?1004h' > /dev/tty
 zle-push
 zle -U "$ZLE_PUSH"; ZLE_PUSH='';

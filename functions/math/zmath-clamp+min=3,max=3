@@ -1,4 +1,4 @@
-builtin eval $SETUP
+builtin eval "$SETUP"
 
 if (( $1 < $2 )) {
   (( $2 ))

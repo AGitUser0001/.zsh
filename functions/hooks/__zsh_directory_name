@@ -1,4 +1,4 @@
-builtin eval $SETUP
+builtin eval "$SETUP"
 local -a match mbegin mend
 
 case $1 {

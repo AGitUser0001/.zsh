@@ -1,2 +1,2 @@
-builtin eval $SETUP
+builtin eval "$SETUP"
 if [[ $PWD != ${:P} && -d ${:P} ]] cd ${:P};

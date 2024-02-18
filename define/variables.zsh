@@ -1,7 +1,5 @@
 SAVEHIST=10000000 HISTSIZE=100000
 
-SETUP='builtin emulate -LR zsh; builtin setopt extended_glob magic_equal_subst bsd_echo glob_star_short prompt_subst brace_ccl combining_chars'
-
 USER_ZDOTDIR=$ZDOTDIR
 
 +x ZLE_PUSH="$ZLE_PUSH"

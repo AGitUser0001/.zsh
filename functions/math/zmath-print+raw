@@ -1,2 +1,2 @@
-builtin eval $SETUP
+builtin eval "$SETUP"
 print -r -- $(( $1 ))
