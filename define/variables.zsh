@@ -8,13 +8,6 @@ USER_ZDOTDIR=$ZDOTDIR
 -xT ZSH_PATH zsh_path
 -U path fpath cdpath module_path PATH FPATH CDPATH MODULE_PATH
 
-path[${path[(i)/bin]}]=( )
-path[${path[(i)/sbin]}]=( )
-path[${path[(i)/usr/bin]}]=( )
-path[${path[(i)/usr/sbin]}]=( )
-path[${path[(i)/usr/local/bin]}]=( )
-path[${path[(i)/Library/Apple/usr/bin]}]=( )
-
 #exec /usr/libexec/path_helper -s | source /dev/stdin
 path=( $zpath $path )
 
