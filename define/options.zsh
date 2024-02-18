@@ -1,8 +1,8 @@
 interactive_comments chase_links
 hist_fcntl_lock share_history notify
-ignore_eof c_bases octal_zeroes
-correct hist_verify hist_no_store
+ignore_eof correct
 
+hist_verify hist_no_store
 hist_reduce_blanks hist_lex_words
 hist_ignore_dups hist_ignore_all_dups
 hist_find_no_dups hist_save_no_dups
