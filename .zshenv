@@ -13,6 +13,4 @@ PS4='%F{red}+%e %N:%i %D{.%6.}> %f'
 if (( ZSH_DEBUG )) zmodload zsh/zprof
 [[ -r $ZDOTDIR/utils.zsh ]] && source $ZDOTDIR/utils.zsh
 
-read-definition-file $ZDOTDIR/define/nameddirs.zsh hash -d
-
 true # $? == 0

@@ -5,8 +5,8 @@ if (( CMDRAN )) __reset
  
 eval -- $PROMPT_COMMAND
 builtin eval $SETUP
-while [[ ! -d ${:P} ]] cd .. 2>/dev/null
-if [[ $PWD != ${:P} && -d ${:P} ]] cd ${:P}
+while [[ ! -d ${:P} && ! ( -e "${${PWD:P}%/*}" && ! -r "${${PWD:P}%/*}" ) ]] cd "${${PWD:P}%/*}" &>/dev/null
+if [[ $PWD != ${:P} && -d ${:P} ]] cd ${:P} &>/dev/null
 
 __prompt-init
 
@@ -15,3 +15,4 @@ if (( ZSH_DEBUG )) {
   zmodload zsh/zprof
   zprof
 }
+

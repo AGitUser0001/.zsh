@@ -2,7 +2,6 @@ read-definition-file $ZDOTDIR/define/definitions.zsh read-definition-file
 __reset-tty
 __reset
 
-if [[ ${:P} != $PWD ]] cd ${:P};
 zle-push
 
 () {
