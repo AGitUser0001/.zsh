@@ -1,4 +1,4 @@
-#flags -Uz
+#flags -RUz
 $fpath[1]/**/[!_]*(-N^/)
 $fpath[1]/**/__?*(-N^/)
 

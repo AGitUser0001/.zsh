@@ -25,8 +25,8 @@ zle -A emacs-forward-word forward-word
     '^[[F'            end-of-line         '^[[1;5C'     forward-word
 
     # history search
-    '^[[5~'           history-incremental-search-backward
-    '^[[6~'           history-incremental-search-forward
+    ${key[PageUp]:-'^[[5~'}               history-incremental-search-backward
+    ${key[PageDown]:-'^[[6~'}             history-incremental-search-forward
 
     # other
     '^[[I'            zle-focus           '^[[O'        zle-blur

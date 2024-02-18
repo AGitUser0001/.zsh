@@ -1,0 +1,3 @@
+#flags -Uz
+chpwd               chpwd_recent_dirs
+zsh_directory_name  zsh_directory_name_cdr
