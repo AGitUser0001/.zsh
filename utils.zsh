@@ -30,8 +30,8 @@ erase() {
 read-definition-file() {
   builtin enable print return shift read setopt eval
   case $# {
-    (0) builtin print -u2 'Usage: read-definition-file <file> [<command>]'; builtin return 1;;
-    (1) 2=$0;;
+    (0) builtin print -u2 "Usage: $funcstack[1] <file> [<command>]"; builtin return 1;;
+    (1) 2=$funcstack[1];;
   }
   local flags= stack=() command= file=$1 REPLY= reply=
   builtin shift
@@ -39,20 +39,16 @@ read-definition-file() {
     case $command {
       ('');;
       (\#*)
-      local action="${command##\#}"
-      if [[ -o extended_glob ]] {
-        local data="${action##[^[:space:]]##[[:space:]]##}"
-      } else {
-        builtin setopt extended_glob
-        local data="${action##[^[:space:]]##[[:space:]]##}"
-        builtin setopt no_extended_glob
-      }
+      local action="${${command#\#}%%[[:space:]]*}"
+      local data="${${command#\#}#*[[:space:]]}"
       case $action {
-        (flags[[:space:]]*) flags="$data";;
-        (if[[:space:]]*) builtin eval "$data"; stack+=$?;;
-        (elif[[:space:]]*) if (( stack[-1] )) { builtin eval "$data"; stack[-1]=$? } else { stack[-1]=0 } ;;
+        ('');;
+        (flags) flags="$data";;
+        (if) builtin eval "$data"; stack+=$?;;
+        (elif) if (( stack[-1] )) { builtin eval "$data"; stack[-1]=$? } else { stack[-1]=0 } ;;
         (else) stack[-1]=$(( !stack[-1] ));; (fi) builtin shift -p stack;;
-        (exec[[:space:]]*) if (( 0${(j"")stack} == 0 )) { builtin eval "$data" }; ;;
+        (exec) if (( 0${(j"")stack} == 0 )) { builtin eval "$data" }; ;;
+        (*) builtin print -u2 "$funcstack[1]: invalid action: $action";;;
       };;
       (*) if (( 0${(j"")stack} == 0 )) { builtin eval "$@" $flags $command; }; ;;
     }
