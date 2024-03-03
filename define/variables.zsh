@@ -3,7 +3,6 @@ SAVEHIST=10000000 HISTSIZE=100000
 USER_ZDOTDIR=$ZDOTDIR
 
 +x ZLE_PUSH="$ZLE_PUSH"
--xT ZSH_PATH zsh_path
 -U path fpath cdpath module_path PATH FPATH CDPATH MODULE_PATH
 
 #if (( precmd_functions[(I)update_terminal_cwd] ))
