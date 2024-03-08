@@ -12,3 +12,4 @@ $ZDOTDIR/comp.init.zsh
 
 $HB_CNF_HANDLER
 /opt/homebrew/share/zsh-autosuggestions/zsh-autosuggestions.zsh
+#exec ZSH_AUTOSUGGEST_STRATEGY=( history completion )

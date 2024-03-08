@@ -6,6 +6,7 @@ zle -A emacs-forward-word forward-word
   for i ( $functions[(I)--?*] ) {
     [[ $functions_source[$i] == $fpath[1]/zle/(*/|)--?* ]] && zle -N -- "${i#--}" "$i"
   }
+  zle -N self-insert url-quote-magic
 
   local map=(
     # command line help
