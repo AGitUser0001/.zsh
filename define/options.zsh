@@ -1,6 +1,6 @@
 interactive_comments chase_links
 hist_fcntl_lock share_history notify
-ignore_eof correct transient_rprompt
+ignore_eof correct
 
 hist_verify hist_no_store
 hist_reduce_blanks hist_lex_words
