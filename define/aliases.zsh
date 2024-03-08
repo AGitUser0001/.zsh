@@ -7,4 +7,4 @@ stage-manager='defaults write com.apple.WindowManager GloballyEnabled -int $((1-
 compaudit=:
 catch='noglob catch'
 rm='rm -I'
-del='trash'
+del='trash -F'
