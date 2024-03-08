@@ -18,6 +18,7 @@ zcalc
 zed
 zmv
 
+bracketed-paste-magic
 chpwd_recent_dirs
 url-quote-magic
 zsh_directory_name_cdr

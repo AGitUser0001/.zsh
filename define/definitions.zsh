@@ -6,4 +6,5 @@ $ZDOTDIR/define/variables.zsh typeset -g
 $ZDOTDIR/define/functions.zsh autoload
 $ZDOTDIR/define/hooks.zsh add-zsh-hook
 $ZDOTDIR/define/sources.zsh source
+$ZDOTDIR/define/widgets.zsh zle -N
 $ZDOTDIR/define/aliases.zsh alias
