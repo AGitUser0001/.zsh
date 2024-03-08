@@ -11,5 +11,9 @@ $ZDOTDIR/comp.init.zsh
 #fi
 
 $HB_CNF_HANDLER
+#if (( ! ZSH_DEBUG ))
 /opt/homebrew/share/zsh-autosuggestions/zsh-autosuggestions.zsh
 #exec ZSH_AUTOSUGGEST_STRATEGY=( history completion )
+/opt/homebrew/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
+#exec ZSH_HIGHLIGHT_HIGHLIGHTERS+=( brackets )
+#fi
