@@ -11,3 +11,4 @@ $ZDOTDIR/comp.init.zsh
 #fi
 
 $HB_CNF_HANDLER
+/opt/homebrew/share/zsh-autosuggestions/zsh-autosuggestions.zsh
