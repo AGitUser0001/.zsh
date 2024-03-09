@@ -1,7 +1,5 @@
 # ZSH Files
-To install, clone this repository and symlink .zshenv to ~/.zshenv.
+To install, clone this repository and run the install script.
 ```zsh
-cd ~;
-git clone git@github.com:AGitUser0001/.zsh.git;
-ln -s .zsh/.zshenv .zshenv;
+git clone git@github.com:AGitUser0001/.zsh.git; .zsh/install;
 ```
