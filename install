@@ -1,24 +1,37 @@
 #!/bin/zsh -f
-zmodload zsh/curses
-query() {
-  local KEY='' WINDOW=main; REPLY='';
-  zcurses string "$WINDOW" "$1";
-  while { zcurses input "$WINDOW" KEY; } {
-    if [[ $KEY == $'\n' ]] {
-      zcurses string "$WINDOW" $'\n'; return;
-    }
-    REPLY+=$KEY; zcurses string "$WINDOW" "$KEY";
-  }
+zmodload zsh/system
+DIR=$ZSH_SCRIPT:a:h
+NAME=$ZSH_SCRIPT:t
+TRAPEXIT() {
+  local out=$?
+  printf '\nYou can run this script again by running: %s\n' "$DIR/$NAME"
+  exit $out
 }
-zcurses init
-zcurses addwin border $LINES $COLUMNS 0 0
-zcurses border border
-zcurses refresh border
+trap 'exit $?' INT ERR QUIT TERM
 
-zcurses addwin main $(( LINES - 2 )) $(( COLUMNS - 4 )) 1 2
-zcurses refresh main
-query "Would you like to enter the setup (yes/no): ";
-if [[ $REPLY == yes ]] {
-  query "Ok (yes/no): ";
+read -r "?Would you like to enter setup? (yes/no): "
+if [[ $REPLY != yes ]] return;
+
+REPLY=$DIR
+vared -p 'Install path: ' REPLY;
+while [[ -e $REPLY:a && $REPLY:a != $DIR ]] {
+  syserror -p "$NAME: $REPLY:a: " EEXIST;
+  vared -p 'Install path: ' REPLY;
 }
-zcurses end
+if [[ $REPLY:a != $DIR ]] mv -- "$DIR" "$REPLY:a";
+DIR=$REPLY:a;
+
+outfile="$HOME/.zshenv"
+printf 'Linking %s to %s\n' "$DIR/.zshenv" "$outfile"
+if [[ -e $outfile ]] {
+  syserror -p "$NAME: $outfile: " EEXIST
+  return 1
+}
+ln -s "$DIR/.zshenv" "$outfile"
+
+outfile="$DIR/config.zsh"
+let SAVE_HIST=10000000 HIST_SIZE=100000
+vared -p 'Maximum entries in history file (SAVEHIST): ' SAVE_HIST
+vared -p 'Maximum history entries in memory (HISTSIZE): ' HIST_SIZE
+printf 'Writing config to %s\n' "$outfile"
+printf 'SAVEHIST=%s HISTSIZE=%s\n' $SAVE_HIST $HIST_SIZE > $outfile
