@@ -1,0 +1,24 @@
+#!/bin/zsh -f
+zmodload zsh/curses
+query() {
+  local KEY='' WINDOW=main; REPLY='';
+  zcurses string "$WINDOW" "$1";
+  while { zcurses input "$WINDOW" KEY; } {
+    if [[ $KEY == $'\n' ]] {
+      zcurses string "$WINDOW" $'\n'; return;
+    }
+    REPLY+=$KEY; zcurses string "$WINDOW" "$KEY";
+  }
+}
+zcurses init
+zcurses addwin border $LINES $COLUMNS 0 0
+zcurses border border
+zcurses refresh border
+
+zcurses addwin main $(( LINES - 2 )) $(( COLUMNS - 4 )) 1 2
+zcurses refresh main
+query "Would you like to enter the setup (yes/no): ";
+if [[ $REPLY == yes ]] {
+  query "Ok (yes/no): ";
+}
+zcurses end
