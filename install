@@ -1,4 +1,4 @@
-#!/bin/zsh -fx
+#!/bin/zsh -f
 zmodload zsh/system
 error=0
 DIR=$ZSH_SCRIPT:a:h
@@ -30,7 +30,7 @@ if [[ $outfile:P == $infile:P ]] {
   syserror -p "$NAME: $outfile: " EEXIST
   return 1
 } else {
-  ln -s "$infile" "$outfile"
+  /bin/ln -s "$infile" "$outfile"
 }
 
 outfile="$DIR/config.zsh"
@@ -78,14 +78,8 @@ typeset -A links=(
 for outfile infile ( ${(@kv)links} ) {
   outfile=$DIR/functions/ln/$outfile
   printf 'Linking %s to %s\n' "$outfile" "$infile"
-  if [[ $outfile:P == $infile:P ]] {
-    printf '%s already linked to %s\n' "$outfile" "$infile"
-  } elif [[ -e $outfile ]] {
-    syserror -p "$NAME: $outfile: " EEXIST
-    error=2
-  } else {
-    ln -s $infile $outfile
-  }
+  /bin/rm $outfile
+  /bin/ln -s $infile $outfile
 }
 printf '%s\n' 'Install complete!'
 return error
