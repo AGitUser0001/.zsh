@@ -1,5 +1,3 @@
-#exec source $ZDOTDIR/homebrew-env.sh
-
 CLICOLOR=1
 PAGER="$HOMEBREW_PREFIX/bin/less"
 MANPAGER=$PAGER
