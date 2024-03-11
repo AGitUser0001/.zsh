@@ -1,4 +1,4 @@
-#!/bin/zsh -f
+#!/bin/zsh -fx
 zmodload zsh/system
 error=0
 DIR=$ZSH_SCRIPT:a:h
@@ -24,7 +24,7 @@ DIR=$REPLY:a;
 
 infile="$DIR/.zshenv" outfile="$HOME/.zshenv"
 printf 'Linking %s to %s\n' "$outfile" "$infile"
-if [[ $outfile:P == $infile ]] {
+if [[ $outfile:P == $infile:P ]] {
   printf '%s already linked to %s\n' "$outfile" "$infile"
 } elif [[ -e $outfile ]] {
   syserror -p "$NAME: $outfile: " EEXIST
@@ -39,7 +39,7 @@ vared -p 'Maximum entries in history file (SAVEHIST): ' SAVE_HIST
 vared -p 'Maximum history entries in memory (HISTSIZE): ' HIST_SIZE
 
 if { whence brew >/dev/null; } {
-  eval "$(brew shellenv zsh)";
+  eval "$(trap -; brew shellenv zsh)";
 } else {
   valid_prefixes=( /usr/local /opt/homebrew /home/linuxbrew/.linuxbrew )
   for valid_prefix ( $valid_prefixes ) {
@@ -52,7 +52,7 @@ if { whence brew >/dev/null; } {
   export HOMEBREW_REPOSITORY="${HOMEBREW_REPOSITORY:-$HOMEBREW_PREFIX}"
 }
 OLD_PREFIX=$HOMEBREW_PREFIX
-vared -p 'Homebrew prefix (HOMEBREW_PREFIX): ' $HOMEBREW_PREFIX
+vared -p 'Homebrew prefix (HOMEBREW_PREFIX): ' HOMEBREW_PREFIX
 if [[ $HOMEBREW_PREFIX != $OLD_PREFIX ]] {
   if [[ $HOMEBREW_CELLAR == $OLD_PREFIX(/*|) ]] {
     HOMEBREW_CELLAR=${HOMEBREW_CELLAR/$OLD_PREFIX/$HOMEBREW_PREFIX}
@@ -61,8 +61,8 @@ if [[ $HOMEBREW_PREFIX != $OLD_PREFIX ]] {
     HOMEBREW_REPOSITORY=${HOMEBREW_REPOSITORY/$OLD_PREFIX/$HOMEBREW_PREFIX}
   }
 }
-vared -p 'Homebrew cellar (HOMEBREW_CELLAR): ' $HOMEBREW_CELLAR
-vared -p 'Homebrew repository (HOMEBREW_REPOSITORY): ' $HOMEBREW_REPOSITORY
+vared -p 'Homebrew cellar (HOMEBREW_CELLAR): ' HOMEBREW_CELLAR
+vared -p 'Homebrew repository (HOMEBREW_REPOSITORY): ' HOMEBREW_REPOSITORY
 
 printf 'Writing config to %s\n' "$outfile"
 printf '' > $outfile
@@ -78,7 +78,7 @@ typeset -A links=(
 for outfile infile ( ${(@kv)links} ) {
   outfile=$DIR/functions/ln/$outfile
   printf 'Linking %s to %s\n' "$outfile" "$infile"
-  if [[ $outfile:P == $infile ]] {
+  if [[ $outfile:P == $infile:P ]] {
     printf '%s already linked to %s\n' "$outfile" "$infile"
   } elif [[ -e $outfile ]] {
     syserror -p "$NAME: $outfile: " EEXIST
