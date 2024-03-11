@@ -10,7 +10,7 @@ TRAPEXIT() {
 }
 trap 'exit $?' INT ERR QUIT TERM
 
-read -r "?Would you like to enter setup? (yes/no): "
+read -r '?Would you like to enter setup? (yes/no): '
 if [[ $REPLY != yes ]] return;
 
 REPLY=$DIR
@@ -81,5 +81,11 @@ for outfile infile ( ${(@kv)links} ) {
   /bin/rm $outfile
   /bin/ln -s $infile $outfile
 }
-printf '%s\n' 'Install complete!'
+for infile ( $DIR/crontab/* ) {
+  read -r '?Install '$infile:t' to crontab? (yes/no): '
+  if [[ $REPLY == yes ]] {
+    ( /usr/bin/crontab -l; < $infile ) | /usr/bin/crontab
+  }
+}
+printf '\n%s' 'Install complete!'
 return error
