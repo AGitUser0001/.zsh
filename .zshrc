@@ -1,5 +1,4 @@
-source $ZDOTDIR/config.zsh
-read-definition-file $ZDOTDIR/define/definitions.zsh read-definition-file
+read-definition-file $ZDOTDIR/define/definitions.zsh
 __reset-tty
 __reset
 

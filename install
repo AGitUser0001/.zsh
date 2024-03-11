@@ -21,17 +21,50 @@ while [[ -e $REPLY:a && $REPLY:a != $DIR ]] {
 if [[ $REPLY:a != $DIR ]] mv -- "$DIR" "$REPLY:a";
 DIR=$REPLY:a;
 
-outfile="$HOME/.zshenv"
-printf 'Linking %s to %s\n' "$DIR/.zshenv" "$outfile"
-if [[ -e $outfile ]] {
+infile="$DIR/.zshenv" outfile="$HOME/.zshenv"
+printf 'Linking %s to %s\n' "$outfile" "$infile"
+if [[ $outfile:P == $DIR/.zshenv ]] {
+  printf '%s already linked to %s\n' "$outfile" "$infile"
+} elif [[ -e $outfile ]] {
   syserror -p "$NAME: $outfile: " EEXIST
   return 1
 }
-ln -s "$DIR/.zshenv" "$outfile"
+ln -s "$infile" "$outfile"
 
 outfile="$DIR/config.zsh"
 let SAVE_HIST=10000000 HIST_SIZE=100000
 vared -p 'Maximum entries in history file (SAVEHIST): ' SAVE_HIST
 vared -p 'Maximum history entries in memory (HISTSIZE): ' HIST_SIZE
+
+if { whence brew >/dev/null; } {
+  eval "$(brew shellenv zsh)";
+} else {
+  valid_prefixes=( /usr/local /opt/homebrew /home/linuxbrew/.linuxbrew )
+  for valid_prefix ( $valid_prefixes ) {
+    if [[ -e $valid_prefix ]] {
+      HOMEBREW_PREFERRED=$valid_prefix
+    }
+  }
+  export HOMEBREW_PREFIX="${HOMEBREW_PREFIX:-$HOMEBREW_PREFERRED}"
+  export HOMEBREW_CELLAR="${HOMEBREW_CELLAR:-$HOMEBREW_PREFIX/Cellar}"
+  export HOMEBREW_REPOSITORY="${HOMEBREW_REPOSITORY:-$HOMEBREW_PREFIX}"
+}
+OLD_PREFIX=$HOMEBREW_PREFIX
+vared -p 'Homebrew prefix (HOMEBREW_PREFIX): ' $HOMEBREW_PREFIX
+if [[ $HOMEBREW_PREFIX != $OLD_PREFIX ]] {
+  if [[ $HOMEBREW_CELLAR == $OLD_PREFIX(/*|) ]] {
+    HOMEBREW_CELLAR=${HOMEBREW_CELLAR/$OLD_PREFIX/$HOMEBREW_PREFIX}
+  }
+  if [[ $HOMEBREW_REPOSITORY == $OLD_PREFIX(/*|) ]] {
+    HOMEBREW_REPOSITORY=${HOMEBREW_REPOSITORY/$OLD_PREFIX/$HOMEBREW_PREFIX}
+  }
+}
+vared -p 'Homebrew cellar (HOMEBREW_CELLAR): ' $HOMEBREW_CELLAR
+vared -p 'Homebrew repository (HOMEBREW_REPOSITORY): ' $HOMEBREW_REPOSITORY
+
 printf 'Writing config to %s\n' "$outfile"
-printf 'SAVEHIST=%s HISTSIZE=%s\n' $SAVE_HIST $HIST_SIZE > $outfile
+printf '' > $outfile
+printf 'SAVEHIST=%s HISTSIZE=%s\n' $SAVE_HIST $HIST_SIZE >> $outfile >&1
+printf 'export HOMEBREW_PREFIX=%s' ${(qq)HOMEBREW_PREFIX} >> $outfile >&1
+printf 'export HOMEBREW_CELLAR=%s' ${(qq)HOMEBREW_CELLAR} >> $outfile >&1
+printf 'export HOMEBREW_REPOSITORY=%s' ${(qq)HOMEBREW_REPOSITORY} >> $outfile >&1
