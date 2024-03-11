@@ -1,5 +1,6 @@
 #!/bin/zsh -f
 zmodload zsh/system
+error=0
 DIR=$ZSH_SCRIPT:a:h
 NAME=$ZSH_SCRIPT:t
 TRAPEXIT() {
@@ -23,13 +24,14 @@ DIR=$REPLY:a;
 
 infile="$DIR/.zshenv" outfile="$HOME/.zshenv"
 printf 'Linking %s to %s\n' "$outfile" "$infile"
-if [[ $outfile:P == $DIR/.zshenv ]] {
+if [[ $outfile:P == $infile ]] {
   printf '%s already linked to %s\n' "$outfile" "$infile"
 } elif [[ -e $outfile ]] {
   syserror -p "$NAME: $outfile: " EEXIST
   return 1
+} else {
+  ln -s "$infile" "$outfile"
 }
-ln -s "$infile" "$outfile"
 
 outfile="$DIR/config.zsh"
 let SAVE_HIST=10000000 HIST_SIZE=100000
@@ -65,6 +67,25 @@ vared -p 'Homebrew repository (HOMEBREW_REPOSITORY): ' $HOMEBREW_REPOSITORY
 printf 'Writing config to %s\n' "$outfile"
 printf '' > $outfile
 printf 'SAVEHIST=%s HISTSIZE=%s\n' $SAVE_HIST $HIST_SIZE >> $outfile >&1
-printf 'export HOMEBREW_PREFIX=%s' ${(qq)HOMEBREW_PREFIX} >> $outfile >&1
-printf 'export HOMEBREW_CELLAR=%s' ${(qq)HOMEBREW_CELLAR} >> $outfile >&1
-printf 'export HOMEBREW_REPOSITORY=%s' ${(qq)HOMEBREW_REPOSITORY} >> $outfile >&1
+printf 'export HOMEBREW_PREFIX=%s\n' ${(qq)HOMEBREW_PREFIX} >> $outfile >&1
+printf 'export HOMEBREW_CELLAR=%s\n' ${(qq)HOMEBREW_CELLAR} >> $outfile >&1
+printf 'export HOMEBREW_REPOSITORY=%s\n' ${(qq)HOMEBREW_REPOSITORY} >> $outfile >&1
+
+typeset -A links=(
+  [zcp]=$HOMEBREW_PREFIX/share/zsh/functions/zmv
+  [zln]=$HOMEBREW_PREFIX/share/zsh/functions/zmv
+)
+for outfile infile ( ${(@kv)links} ) {
+  outfile=$DIR/functions/ln/$outfile
+  printf 'Linking %s to %s\n' "$outfile" "$infile"
+  if [[ $outfile:P == $infile ]] {
+    printf '%s already linked to %s\n' "$outfile" "$infile"
+  } elif [[ -e $outfile ]] {
+    syserror -p "$NAME: $outfile: " EEXIST
+    error=2
+  } else {
+    ln -s $infile $outfile
+  }
+}
+printf '%s\n' 'Install complete!'
+return error
