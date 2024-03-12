@@ -17,3 +17,5 @@ zsh/stat b:zstat
 
 zsh/attr
 zsh/curses
+zsh/net/socket
+zsh/net/tcp

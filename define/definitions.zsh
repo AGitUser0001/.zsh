@@ -1,4 +1,4 @@
-$ZDOTDIR/define/zshmods.zsh zmodload
+$ZDOTDIR/define/modules.zsh zmodload
 $ZDOTDIR/define/options.zsh setopt
 $ZDOTDIR/define/nameddirs.zsh hash -d
 $ZDOTDIR/define/environment.zsh export
