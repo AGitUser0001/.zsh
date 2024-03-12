@@ -45,7 +45,7 @@ TITLE=''
 TAB_TITLE=''
 WORDCHARS='*?'
 
-PS1=$'%K{blue} %3~ %F{blue}%(4V"%K{%1v}%F{%2v} %B%3v%4v%5v%b %F{%1v}")%K{%6v}%F{%7v} %8vs %-50(l"%F{%6v}%K{black}%F{white} "\n%k%f)%(#"%B%F{red}")%# %b%f%k'
+PS1=$'%K{blue} %3~ %F{blue}%(4V"%K{%1v}%F{%2v} %B%3v%4v%5v%b %F{%1v}")%K{%6v}%F{%7v} %8vs %f%k%-50(l" "\n%k%f)%(#"%B%F{red}")%# %b%f%k'
 PS2=$'%K{208}%F{black} $(
   builtin eval "$SETUP"
   printf %s ${${(j"  ")${${=${(%):-%_}}}}[1,-12]}
