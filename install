@@ -96,7 +96,7 @@ for OUT IN ( ${(@kv)links} ) {
 }
 
 echo
-/usr/bin/crontab -l >{crontab} | read -rd '' CRONTAB && true
+/usr/bin/crontab -l | read -rd '' CRONTAB && true
 
 let MODIFIED=0 && true
 for IN ( $DIR/crontab/* ) {
