@@ -3,6 +3,7 @@ zmodload zsh/system
 error=0
 DIR=$ZSH_SCRIPT:a:h
 NAME=$ZSH_SCRIPT:t
+exec 3<&1
 TRAPEXIT() {
   local out=$?
   printf '\nYou can run this script again by running: %s\n' "$DIR/$NAME"
@@ -32,6 +33,9 @@ if [[ $outfile:P == $infile ]] {
 } else {
   /bin/ln -s "$infile" "$outfile"
 }
+
+echo
+echo 'Entering configuration'
 
 outfile="$DIR/config.zsh"
 let SAVE_HIST=10000000 HIST_SIZE=100000
@@ -66,11 +70,13 @@ vared -p 'Homebrew repository (HOMEBREW_REPOSITORY): ' HOMEBREW_REPOSITORY
 
 printf 'Writing config to %s\n' "$outfile"
 printf '' > $outfile
-printf 'SAVEHIST=%s HISTSIZE=%s\n' $SAVE_HIST $HIST_SIZE >> $outfile >&1
-printf 'export HOMEBREW_PREFIX=%s\n' ${(qq)HOMEBREW_PREFIX} >> $outfile >&1
-printf 'export HOMEBREW_CELLAR=%s\n' ${(qq)HOMEBREW_CELLAR} >> $outfile >&1
-printf 'export HOMEBREW_REPOSITORY=%s\n' ${(qq)HOMEBREW_REPOSITORY} >> $outfile >&1
+echo
+printf 'SAVEHIST=%s HISTSIZE=%s\n' $SAVE_HIST $HIST_SIZE >> $outfile >&3
+printf 'export HOMEBREW_PREFIX=%s\n' ${(qq)HOMEBREW_PREFIX} >> $outfile >&3
+printf 'export HOMEBREW_CELLAR=%s\n' ${(qq)HOMEBREW_CELLAR} >> $outfile >&3
+printf 'export HOMEBREW_REPOSITORY=%s\n' ${(qq)HOMEBREW_REPOSITORY} >> $outfile >&3
 
+echo
 typeset -A links=(
   [zcp]=$HOMEBREW_PREFIX/share/zsh/functions/zmv
   [zln]=$HOMEBREW_PREFIX/share/zsh/functions/zmv
@@ -78,16 +84,18 @@ typeset -A links=(
 for outfile infile ( ${(@kv)links} ) {
   outfile=$DIR/functions/ln/$outfile
   printf 'Linking %s to %s\n' "$outfile" "$infile"
-  if [[ $outfile:P == $infile ]] {
+  if [[ $outfile:P == $infile:P ]] {
     printf '%s already linked to %s\n' "$outfile" "$infile"
   } else {
     if [[ -e $outfile ]] {
-      printf 'removing existing file at %s\n' "$infile"
+      printf 'removing existing file at %s\n' "$outfile"
       /bin/rm $outfile
     }
     /bin/ln -s $infile $outfile
   }
 }
+
+echo
 for infile ( $DIR/crontab/* ) {
   read -r '?Install '$infile:t' to crontab? (yes/no): '
   if [[ $REPLY == yes ]] {
