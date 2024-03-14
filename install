@@ -41,7 +41,7 @@ vared -p 'Maximum history entries in memory (HISTSIZE): ' HIST_SIZE
 if { whence brew >/dev/null; } {
   eval "$(trap -; brew shellenv zsh)";
 } else {
-  valid_prefixes=( /usr/local /opt/homebrew /home/linuxbrew/.linuxbrew )
+  valid_prefixes=( /usr/local /home/linuxbrew/.linuxbrew /opt/homebrew )
   for valid_prefix ( $valid_prefixes ) {
     if [[ -e $valid_prefix ]] {
       HOMEBREW_PREFERRED=$valid_prefix
