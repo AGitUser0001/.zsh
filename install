@@ -43,8 +43,7 @@ vared -p 'Maximum entries in history file (SAVEHIST): ' SAVE_HIST
 vared -p 'Maximum history entries in memory (HISTSIZE): ' HIST_SIZE
 
 if { whence brew >/dev/null; } {
-  brew shellenv zsh >{shellenv}
-  source /dev/stdin <{shellenv}
+  brew shellenv zsh | source /dev/stdin
 } else {
   valid_prefixes=( /usr/local /home/linuxbrew/.linuxbrew /opt/homebrew )
   for valid_prefix ( $valid_prefixes ) {
@@ -97,8 +96,7 @@ for OUT IN ( ${(@kv)links} ) {
 }
 
 echo
-/usr/bin/crontab -l >{crontab}
-read -rd '' CRONTAB <{crontab} && true
+/usr/bin/crontab -l >{crontab} | read -rd '' CRONTAB && true
 
 let MODIFIED=0 && true
 for IN ( $DIR/crontab/* ) {
