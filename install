@@ -1,6 +1,6 @@
 #!/bin/zsh -f
 zmodload zsh/system
-error=0
+let ERROR=0
 DIR=$ZSH_SCRIPT:a:h
 NAME=$ZSH_SCRIPT:t
 exec 3<&1
@@ -23,21 +23,21 @@ while [[ -e $REPLY:a && $REPLY:a != $DIR ]] {
 if [[ $REPLY:a != $DIR ]] mv -- "$DIR" "$REPLY:a";
 DIR=$REPLY:a;
 
-infile="$DIR/.zshenv" outfile="$HOME/.zshenv"
-printf 'Linking %s to %s\n' "$outfile" "$infile"
-if [[ $outfile:P == $infile ]] {
-  printf '%s already linked to %s\n' "$outfile" "$infile"
-} elif [[ -e $outfile ]] {
-  syserror -p "$NAME: $outfile: " EEXIST
+IN="$DIR/.zshenv" OUT="$HOME/.zshenv"
+printf 'Linking %s to %s\n' "$OUT" "$IN"
+if [[ $OUT:P == $IN ]] {
+  printf '%s already linked to %s\n' "$OUT" "$IN"
+} elif [[ -e $OUT ]] {
+  syserror -p "$NAME: $OUT: " EEXIST
   return 1
 } else {
-  /bin/ln -s "$infile" "$outfile"
+  /bin/ln -s "$IN" "$OUT"
 }
 
 echo
 echo 'Entering configuration'
 
-outfile="$DIR/config.zsh"
+OUT="$DIR/config.zsh"
 let SAVE_HIST=10000000 HIST_SIZE=100000
 vared -p 'Maximum entries in history file (SAVEHIST): ' SAVE_HIST
 vared -p 'Maximum history entries in memory (HISTSIZE): ' HIST_SIZE
@@ -68,39 +68,51 @@ if [[ $HOMEBREW_PREFIX != $OLD_PREFIX ]] {
 vared -p 'Homebrew cellar (HOMEBREW_CELLAR): ' HOMEBREW_CELLAR
 vared -p 'Homebrew repository (HOMEBREW_REPOSITORY): ' HOMEBREW_REPOSITORY
 
-printf 'Writing config to %s\n' "$outfile"
-printf '' > $outfile
+printf 'Writing config to %s\n' "$OUT"
+printf '' > $OUT
 echo
-printf 'SAVEHIST=%s HISTSIZE=%s\n' $SAVE_HIST $HIST_SIZE >> $outfile >&3
-printf 'export HOMEBREW_PREFIX=%s\n' ${(qq)HOMEBREW_PREFIX} >> $outfile >&3
-printf 'export HOMEBREW_CELLAR=%s\n' ${(qq)HOMEBREW_CELLAR} >> $outfile >&3
-printf 'export HOMEBREW_REPOSITORY=%s\n' ${(qq)HOMEBREW_REPOSITORY} >> $outfile >&3
+printf 'SAVEHIST=%s HISTSIZE=%s\n' $SAVE_HIST $HIST_SIZE >> $OUT >&3
+printf 'export HOMEBREW_PREFIX=%s\n' ${(qq)HOMEBREW_PREFIX} >> $OUT >&3
+printf 'export HOMEBREW_CELLAR=%s\n' ${(qq)HOMEBREW_CELLAR} >> $OUT >&3
+printf 'export HOMEBREW_REPOSITORY=%s\n' ${(qq)HOMEBREW_REPOSITORY} >> $OUT >&3
 
 echo
 typeset -A links=(
   [zcp]=$HOMEBREW_PREFIX/share/zsh/functions/zmv
   [zln]=$HOMEBREW_PREFIX/share/zsh/functions/zmv
 )
-for outfile infile ( ${(@kv)links} ) {
-  outfile=$DIR/functions/ln/$outfile
-  printf 'Linking %s to %s\n' "$outfile" "$infile"
-  if [[ $outfile:P == $infile:P ]] {
-    printf '%s already linked to %s\n' "$outfile" "$infile"
+for OUT IN ( ${(@kv)links} ) {
+  OUT=$DIR/functions/ln/$OUT
+  printf 'Linking %s to %s\n' "$OUT" "$IN"
+  if [[ $OUT:P == $IN:P ]] {
+    printf '%s already linked to %s\n' "$OUT" "$IN"
   } else {
-    if [[ -e $outfile ]] {
-      printf 'removing existing file at %s\n' "$outfile"
-      /bin/rm $outfile
+    if [[ -e $OUT ]] {
+      printf 'removing existing file at %s\n' "$OUT"
+      /bin/rm $OUT
     }
-    /bin/ln -s $infile $outfile
+    /bin/ln -s $IN $OUT
   }
 }
 
 echo
-for infile ( $DIR/crontab/* ) {
-  read -r '?Install '$infile:t' to crontab? (yes/no): '
+CRONTAB="$( trap -; /usr/bin/crontab -l )"
+let MODIFIED=0 && true
+for IN ( $DIR/crontab/* ) {
+  read -rd '' DATA < $IN && true
+  if [[ $CRONTAB == (*$'\n'|)$DATA($'\n'*|) ]] {
+    printf '%s already in crontab\n' "$IN:t"
+    continue
+  }
+  read -r '?Install '$IN:t' to crontab? (yes/no): '
   if [[ $REPLY == yes ]] {
-    ( /usr/bin/crontab -l; < $infile ) | /usr/bin/crontab
+    MODIFIED=1
+    CRONTAB+=$'\n'$DATA
   }
 }
+if (( MODIFIED )) {
+  /usr/bin/crontab <<< $CRONTAB
+}
+
 printf '\n%s' 'Install complete!'
-return error
+return ERROR
