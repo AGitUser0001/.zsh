@@ -47,7 +47,7 @@ read-definition-file() {
         (if) builtin eval "$data"; stack+=$?;;
         (elif) if (( stack[-1] )) { builtin eval "$data"; stack[-1]=$? } else { stack[-1]=0 } ;;
         (else) stack[-1]=$(( !stack[-1] ));; (fi) builtin shift -p stack;;
-        (exec) if (( 0${(j"")stack} == 0 )) { builtin eval "$data" }; ;;
+        (exec) if (( 0${(j"")stack} == 0 )) { builtin eval "$data"; }; ;;
         (*) builtin print -u2 "$funcstack[1]: invalid action: $action";;;
       };;
       (*) if (( 0${(j"")stack} == 0 )) { builtin eval "$@" $flags $command; }; ;;
