@@ -44,7 +44,7 @@ vared -p 'Maximum history entries in memory (HISTSIZE): ' HIST_SIZE
 
 if { whence brew >/dev/null; } {
   brew shellenv zsh >{shellenv}
-  source <{shellenv}
+  source /dev/stdin <{shellenv}
 } else {
   valid_prefixes=( /usr/local /home/linuxbrew/.linuxbrew /opt/homebrew )
   for valid_prefix ( $valid_prefixes ) {
