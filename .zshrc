@@ -36,6 +36,9 @@ zle-push
   }
 }
 
+LASTCMDSTART=-1
+elapsed=( )
+
 CURRENT_GIT_BRANCH=''
 TITLE=''
 TAB_TITLE=''
