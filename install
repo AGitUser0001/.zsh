@@ -50,8 +50,8 @@ readvar SAVEHIST $SAVEHIST
 readvar HISTSIZE $HISTSIZE
 HISTFILE=$HISTFILE:a
 
-echo
 echo 'Entering configuration'
+echo
 
 read -r '?Delete existing history (you should do this on first install)? (yes/no): '
 if [[ $REPLY == yes ]] {
