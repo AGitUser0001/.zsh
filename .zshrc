@@ -41,7 +41,7 @@ elapsed=( )
 
 CURRENT_GIT_BRANCH=''
 TITLE=''
-TAB_TITLE=''
+TABTITLE=''
 WORDCHARS='*?'
 
 PS1=$'%K{blue} %3~ %F{blue}%(4V"%K{%1v}%F{%2v} %B%3v%4v%5v%b %F{%1v}")%K{%6v}%F{%7v} %8vs %f%k%-50(l" "\n%k%f)%(#"%B%F{red}%b")%# %f'
