@@ -35,12 +35,32 @@ if [[ $OUT:P == $IN ]] {
 }
 
 echo
+echo 'Reading configuration variables'
+readvar() {
+  if [[ -v commands[zsh] ]] {
+    - zsh -lic 'builtin printf "%s" "${'$1'-'${(qq)2}'}"' | read -rd '' "$1" && true;
+  } else {
+    typeset $1=$2
+  }
+}
+
+let SAVEHIST=10000000 HISTSIZE=100000
+readvar HISTFILE $HOME/.zsh_history
+readvar SAVEHIST $SAVEHIST
+readvar HISTSIZE $HISTSIZE
+if [[ -e "$HISTFILE" ]] {
+  read -r '?Would you like to import history? (yes/no): '
+  if [[ $REPLY == yes ]] {  
+    /bin/cp -a -- "$HISTFILE:a" "$DIR"
+  }
+}
+
+echo
 echo 'Entering configuration'
 
 OUT="$DIR/config.zsh"
-let SAVE_HIST=10000000 HIST_SIZE=100000
-vared -p 'Maximum entries in history file (SAVEHIST): ' SAVE_HIST
-vared -p 'Maximum history entries in memory (HISTSIZE): ' HIST_SIZE
+vared -p 'Maximum entries in history file (SAVEHIST): ' SAVEHIST
+vared -p 'Maximum history entries in memory (HISTSIZE): ' HISTSIZE
 
 if { whence brew >/dev/null; } {
   brew shellenv zsh | source /dev/stdin
@@ -71,7 +91,7 @@ vared -p 'Homebrew repository (HOMEBREW_REPOSITORY): ' HOMEBREW_REPOSITORY
 printf 'Writing config to %s\n' "$OUT"
 printf '' > $OUT
 echo
-printf 'SAVEHIST=%s HISTSIZE=%s\n' $SAVE_HIST $HIST_SIZE >> $OUT >&3
+printf 'SAVEHIST=%s HISTSIZE=%s\n' "$SAVEHIST" "$HISTSIZE" >> $OUT >&3
 printf 'export HOMEBREW_PREFIX=%s\n' ${(qq)HOMEBREW_PREFIX} >> $OUT >&3
 printf 'export HOMEBREW_CELLAR=%s\n' ${(qq)HOMEBREW_CELLAR} >> $OUT >&3
 printf 'export HOMEBREW_REPOSITORY=%s\n' ${(qq)HOMEBREW_REPOSITORY} >> $OUT >&3
