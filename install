@@ -100,18 +100,18 @@ writeconf() {
   printf -- "%s%s=%s\n" "${2:+$2 }" "$1" "${(Pqq)1}" >> $OUT >&3
 }
 
+echo
 OUT="$DIR/config/zshenv"
 printf 'Writing config (zshenv) to %s\n' "$OUT"
 printf '' > $OUT
-echo
 writeconf HOMEBREW_PREFIX export
 writeconf HOMEBREW_CELLAR export
 writeconf HOMEBREW_REPOSITORY export
 
+echo
 OUT="$DIR/config/zshrc"
 printf 'Writing config (zshrc) to %s\n' "$OUT"
 printf '' > $OUT
-echo
 writeconf HISTFILE
 writeconf SAVEHIST
 writeconf HISTSIZE
