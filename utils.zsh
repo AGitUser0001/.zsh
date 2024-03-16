@@ -54,3 +54,9 @@ read-definition-file() {
     }
   } < $file
 }
+
+zle-push() {
+  builtin emulate -LR zsh
+  if [[ ! -t 1 ]] return
+  while { builtin read -rskt } { ZLE_PUSH+=$REPLY; }
+}

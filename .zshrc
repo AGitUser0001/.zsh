@@ -1,7 +1,7 @@
+zle-push
 read-definition-file $ZDOTDIR/define/definitions.zsh
 __reset-tty
 __reset
-
 zle-push
 
 () {
@@ -21,9 +21,6 @@ zle-push
   }
 }
 
-LASTCMDSTART=-1
-elapsed=( )
-
 () {
   local i
   for i ( $functions[(I)__?*] ) {
@@ -39,7 +36,6 @@ elapsed=( )
   }
 }
 
-__reset
 CURRENT_GIT_BRANCH=''
 TITLE=''
 TAB_TITLE=''
@@ -56,6 +52,6 @@ RPS1=$'%(9V.%(?..%K{red}%f %? ).)'
 SPROMPT="%K{8} '%R' to '%r'  [n]o  yes  abort  edit %k%f%b%s "
 
 __reset
-
 zle-push
+
 true # $? == 0

@@ -1,6 +1,9 @@
 +x ZLE_PUSH="$ZLE_PUSH"
 -U path fpath cdpath module_path PATH FPATH CDPATH MODULE_PATH
 
+LASTCMDSTART=-1
+elapsed=( )
+
 #if (( precmd_functions[(I)update_terminal_cwd] ))
 precmd_functions[(I)update_terminal_cwd]=( )
 chpwd_functions=( $chpwd_functions update_terminal_cwd )
