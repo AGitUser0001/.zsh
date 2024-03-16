@@ -48,17 +48,23 @@ let SAVEHIST=10000000 HISTSIZE=100000
 readvar HISTFILE
 readvar SAVEHIST $SAVEHIST
 readvar HISTSIZE $HISTSIZE
-if [[ -e $HISTFILE && $HISTFILE != $DIR/.zsh_history ]] {
-  read -r '?Would you like to import history? (yes/no): '
-  if [[ $REPLY == yes ]] {
-    /bin/rm -- "$DIR/.zsh_history"
-    /bin/cp -a -- "$HISTFILE:a" "$DIR/.zsh_history"
-  }
-}
-HISTFILE="$DIR/.zsh_history"
+HISTFILE=$HISTFILE:a
 
 echo
 echo 'Entering configuration'
+
+read -r '?Delete existing history (you should do this on first install)? (yes/no): '
+if [[ $REPLY == yes ]] {
+  /bin/rm -- "$DIR/.zsh_history"
+}
+
+if [[ -e $HISTFILE && $HISTFILE != $DIR/.zsh_history ]] {
+  read -r '?Would you like to import history from '$HISTFILE'? (yes/no): '
+  if [[ $REPLY == yes ]] {
+    < "$HISTFILE" >> "$DIR/.zsh_history"
+  }
+}
+HISTFILE="$DIR/.zsh_history"
 
 vared -p 'History file location (HISTFILE): ' HISTFILE
 vared -p 'Maximum entries in history file (SAVEHIST): ' SAVEHIST

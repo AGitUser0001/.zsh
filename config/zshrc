@@ -1,2 +1,3 @@
+HISTFILE='/Users/lucaszheng/.zsh/.zsh_history'
 SAVEHIST='10000000'
 HISTSIZE='100000'
