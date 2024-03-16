@@ -45,19 +45,22 @@ readvar() {
 }
 
 let SAVEHIST=10000000 HISTSIZE=100000
-readvar HISTFILE $HOME/.zsh_history
+readvar HISTFILE
 readvar SAVEHIST $SAVEHIST
 readvar HISTSIZE $HISTSIZE
-if [[ -e "$HISTFILE" ]] {
+if [[ -e $HISTFILE && $HISTFILE != $DIR/.zsh_history ]] {
   read -r '?Would you like to import history? (yes/no): '
-  if [[ $REPLY == yes ]] {  
-    /bin/cp -a -- "$HISTFILE:a" "$DIR"
+  if [[ $REPLY == yes ]] {
+    /bin/rm -- "$DIR/.zsh_history"
+    /bin/cp -a -- "$HISTFILE:a" "$DIR/.zsh_history"
   }
 }
+HISTFILE="$DIR/.zsh_history"
 
 echo
 echo 'Entering configuration'
 
+vared -p 'History file location (HISTFILE): ' HISTFILE
 vared -p 'Maximum entries in history file (SAVEHIST): ' SAVEHIST
 vared -p 'Maximum history entries in memory (HISTSIZE): ' HISTSIZE
 
@@ -103,6 +106,7 @@ OUT="$DIR/config/zshrc"
 printf 'Writing config (zshrc) to %s\n' "$OUT"
 printf '' > $OUT
 echo
+writeconf HISTFILE
 writeconf SAVEHIST
 writeconf HISTSIZE
 
