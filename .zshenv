@@ -1,5 +1,5 @@
 export ZDOTDIR="${${(%):-%x}:P:h}"
-source $ZDOTDIR/config.zsh
+source $ZDOTDIR/config/zshenv
 
 SHELL_SESSIONS_DISABLE=1
 typeset -x ZPATH PATH FPATH CDPATH MODULE_PATH

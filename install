@@ -58,7 +58,6 @@ if [[ -e "$HISTFILE" ]] {
 echo
 echo 'Entering configuration'
 
-OUT="$DIR/config.zsh"
 vared -p 'Maximum entries in history file (SAVEHIST): ' SAVEHIST
 vared -p 'Maximum history entries in memory (HISTSIZE): ' HISTSIZE
 
@@ -88,13 +87,24 @@ if [[ $HOMEBREW_PREFIX != $OLD_PREFIX ]] {
 vared -p 'Homebrew cellar (HOMEBREW_CELLAR): ' HOMEBREW_CELLAR
 vared -p 'Homebrew repository (HOMEBREW_REPOSITORY): ' HOMEBREW_REPOSITORY
 
-printf 'Writing config to %s\n' "$OUT"
+writeconf() {
+  printf -- "%s%s=%s\n" "${2:+$2 }" "$1" "${(Pqq)1}" >> $OUT >&3
+}
+
+OUT="$DIR/config/zshenv"
+printf 'Writing config (zshenv) to %s\n' "$OUT"
 printf '' > $OUT
 echo
-printf 'SAVEHIST=%s HISTSIZE=%s\n' "$SAVEHIST" "$HISTSIZE" >> $OUT >&3
-printf 'export HOMEBREW_PREFIX=%s\n' ${(qq)HOMEBREW_PREFIX} >> $OUT >&3
-printf 'export HOMEBREW_CELLAR=%s\n' ${(qq)HOMEBREW_CELLAR} >> $OUT >&3
-printf 'export HOMEBREW_REPOSITORY=%s\n' ${(qq)HOMEBREW_REPOSITORY} >> $OUT >&3
+writeconf HOMEBREW_PREFIX export
+writeconf HOMEBREW_CELLAR export
+writeconf HOMEBREW_REPOSITORY export
+
+OUT="$DIR/config/zshrc"
+printf 'Writing config (zshrc) to %s\n' "$OUT"
+printf '' > $OUT
+echo
+writeconf SAVEHIST
+writeconf HISTSIZE
 
 echo
 typeset -A links=(
