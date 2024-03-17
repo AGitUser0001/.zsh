@@ -23,15 +23,15 @@ zle-push
 }
 
 () {
-  local i
-  for i ( $functions[(I)__?*] ) {
-    if [[ $functions_source[$i] == $fpath[1]/hooks/(*/)#__?* ]] case ${${${i#__}%%+*}%%\=*} {
+  local fn
+  for fn ( $functions[(I)__?*] ) {
+    if [[ $functions_source[$fn] == $fpath[1]/hooks/(*/)#__?* ]] case ${${${fn#__}%%+*}%%\=*} {
       (chpwd|precmd|preexec|periodic) ;&
-      (zshaddhistory|zshexit|zsh_directory_name) add-zsh-hook ${${${i#__}%%+*}%%\=*} $i;;
+      (zshaddhistory|zshexit|zsh_directory_name) add-zsh-hook ${${${fn#__}%%+*}%%\=*} $fn;;
       (isearch-exit|isearch-update|line-pre-redraw|line-init) ;&
       (line-finish|history-line-set|keymap-select) 
-        zle -N zle-func-${${i#__}%%+*} $i
-        add-zle-hook-widget ${${${i#__}%%+*}%%\=*} zle-func-${${i#__}%%+*};;
+        zle -N zle-func-${${fn#__}%%+*} $fn
+        add-zle-hook-widget ${${${fn#__}%%+*}%%\=*} zle-func-${${fn#__}%%+*};;
       (*) return 1;
     }
   }
