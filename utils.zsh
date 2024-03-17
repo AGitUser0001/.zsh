@@ -50,7 +50,7 @@ define() {
         (exec) if (( 0${(j"")stack} == 0 )) { builtin eval "$data"; }; ;;
         (*) builtin print -u2 "$funcstack[1]: invalid action: $action";;;
       };;
-      (*) if (( 0${(j"")stack} == 0 )) { builtin eval "${(q)argv}" $flags $command; }; ;;
+      (*) if (( 0${(j"")stack} == 0 )) { builtin eval "${(q)@}" $flags $command; }; ;;
     }
   } < $file
 }
