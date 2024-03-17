@@ -4,3 +4,5 @@ To install, clone this repository and run the install script.
 git clone git@github.com:AGitUser0001/.zsh.git;
 .zsh/install;
 ```
+# Functions
+Functions are under the [./functions](./functions) folder.
