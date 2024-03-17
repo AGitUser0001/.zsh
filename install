@@ -4,7 +4,7 @@ zmodload zsh/system
 path+=( /bin )
 DIR=$ZSH_SCRIPT:a:h
 NAME=$ZSH_SCRIPT:t
-exec 3<&1 # create file descriptor to be able to redirect something to both stdout AND a file
+REPLY=''
 TRAPEXIT() {
   local out=$?
   printf '\nYou can run this script again by running: %s\n' "$DIR/$NAME"
@@ -37,7 +37,8 @@ if [[ $OUT:P == $IN ]] {
 
 echo
 echo 'Reading configuration variables'
-readvar() {
+
+readconf() {
   if [[ ! -v 2 ]] 2=${(P)1};
   if [[ -v commands[zsh] ]] {
     - zsh -lic 'builtin printf "%s" "${'$1'-'${(qq)2}'}"' | read -rd '' "$1" && true;
@@ -46,9 +47,9 @@ readvar() {
 }
 
 let SAVEHIST=10000000 HISTSIZE=100000
-readvar HISTFILE
-readvar SAVEHIST
-readvar HISTSIZE
+readconf HISTFILE
+readconf SAVEHIST
+readconf HISTSIZE
 HISTFILE=$HISTFILE:a
 
 echo 'Entering configuration'
@@ -105,6 +106,7 @@ if [[ $HOMEBREW_PREFIX != $OLD_PREFIX ]] {
 vared -p 'Homebrew cellar (HOMEBREW_CELLAR): ' HOMEBREW_CELLAR
 vared -p 'Homebrew repository (HOMEBREW_REPOSITORY): ' HOMEBREW_REPOSITORY
 
+exec 3<&1 # create file descriptor to be able to redirect something to both stdout AND a file
 writeconf() {
   printf -- "%s%s=%s\n" "${2:+$2 }" "$1" "${(Pqq)1}" >> $OUT >&3
 }
