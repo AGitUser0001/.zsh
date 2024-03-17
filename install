@@ -1,9 +1,8 @@
 #!/bin/zsh -f
 zmodload zsh/system
-let ERROR=0
 DIR=$ZSH_SCRIPT:a:h
 NAME=$ZSH_SCRIPT:t
-exec 3<&1
+exec 3<&1 # create file descriptor to be able to redirect something to both stdout AND a file
 TRAPEXIT() {
   local out=$?
   printf '\nYou can run this script again by running: %s\n' "$DIR/$NAME"
@@ -164,4 +163,3 @@ if (( MODIFIED )) {
 }
 
 printf '\n%s' 'Install complete!'
-return ERROR
