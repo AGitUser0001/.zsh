@@ -27,7 +27,7 @@ erase() {
   builtin source $ZDOTDIR/terminfo.zsh
 }
 
-read-definition-file() {
+define() {
   builtin enable print return shift read setopt eval
   case $# {
     (0) builtin print -u2 "Usage: $funcstack[1] <file> [<command>]"; builtin return 1;;
@@ -50,7 +50,7 @@ read-definition-file() {
         (exec) if (( 0${(j"")stack} == 0 )) { builtin eval "$data"; }; ;;
         (*) builtin print -u2 "$funcstack[1]: invalid action: $action";;;
       };;
-      (*) if (( 0${(j"")stack} == 0 )) { builtin eval "$@" $flags $command; }; ;;
+      (*) if (( 0${(j"")stack} == 0 )) { builtin eval "${(q)argv}" $flags $command; }; ;;
     }
   } < $file
 }
