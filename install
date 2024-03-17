@@ -37,23 +37,23 @@ if [[ $OUT:P == $IN ]] {
 echo
 echo 'Reading configuration variables'
 readvar() {
+  if [[ ! -v 2 ]] 2=${(P)1};
   if [[ -v commands[zsh] ]] {
     - zsh -lic 'builtin printf "%s" "${'$1'-'${(qq)2}'}"' | read -rd '' "$1" && true;
-  } else {
-    typeset $1=$2
   }
+  if [[ -z ${(P)1} ]] typeset $1=$2;
 }
 
 let SAVEHIST=10000000 HISTSIZE=100000
 readvar HISTFILE
-readvar SAVEHIST $SAVEHIST
-readvar HISTSIZE $HISTSIZE
+readvar SAVEHIST
+readvar HISTSIZE
 HISTFILE=$HISTFILE:a
 
 echo 'Entering configuration'
 echo
 
-read -r '?Delete existing history (you should do this on first install)? (yes/no): '
+read -r '?Delete existing history (you should do this on first install!)? (yes/no): '
 if [[ $REPLY == yes ]] {
   /bin/rm -- "$DIR/.zsh_history"
 }
