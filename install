@@ -20,7 +20,7 @@ while [[ -e $REPLY:a && $REPLY:a != $DIR ]] {
   syserror -p "$NAME: $REPLY:a: " EEXIST;
   vared -p 'Install path: ' REPLY;
 }
-if [[ $REPLY:a != $DIR ]] mv -- "$DIR" "$REPLY:a";
+if [[ $REPLY:a != $DIR ]] /bin/mv -- "$DIR" "$REPLY:a";
 DIR=$REPLY:a;
 
 IN="$DIR/.zshenv" OUT="$HOME/.zshenv"
@@ -58,15 +58,23 @@ if [[ $REPLY == yes ]] {
   /bin/rm -- "$DIR/.zsh_history"
 }
 
+OUT=$DIR/.zsh_history
 if [[ -e $HISTFILE && $HISTFILE != $DIR/.zsh_history ]] {
   read -r '?Would you like to import history from '$HISTFILE'? (yes/no): '
   if [[ $REPLY == yes ]] {
-    < "$HISTFILE" >> "$DIR/.zsh_history"
+    < "$HISTFILE" >> $OUT
   }
 }
-HISTFILE="$DIR/.zsh_history"
 
-vared -p 'History file location (HISTFILE): ' HISTFILE
+HISTFILE=$OUT
+vared -p 'History file location (HISTFILE): ' OUT
+while [[ -e $OUT:a && $OUT:a != $HISTFILE ]] {
+  syserror -p "$NAME: $OUT:a: " EEXIST;
+  vared -p 'History file location (HISTFILE): ' OUT;
+}
+if [[ $OUT:a != $HISTFILE ]] /bin/mv -- "$HISTFILE" "$OUT:a";
+HISTFILE=$OUT
+
 vared -p 'Maximum entries in history file (SAVEHIST): ' SAVEHIST
 vared -p 'Maximum history entries in memory (HISTSIZE): ' HISTSIZE
 
