@@ -25,7 +25,8 @@ zle-push
 () {
   local fn
   for fn ( $functions[(I)__?*] ) {
-    if [[ $functions_source[$fn] == $fpath[1]/hooks/(*/)#__?* ]] case ${${${fn#__}%%+*}%%\=*} {
+    if [[ $functions_source[$fn] != $fpath[1]/hooks/(*/)#__?* ]] continue;
+    case ${${${fn#__}%%+*}%%\=*} {
       (chpwd|precmd|preexec|periodic) ;&
       (zshaddhistory|zshexit|zsh_directory_name) add-zsh-hook ${${${fn#__}%%+*}%%\=*} $fn;;
       (isearch-exit|isearch-update|line-pre-redraw|line-init) ;&
