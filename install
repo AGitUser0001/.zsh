@@ -1,4 +1,5 @@
 #!/bin/zsh -f
+if [[ $1 == -*x* ]] set -x;
 zmodload zsh/system
 path+=( /bin )
 DIR=$ZSH_SCRIPT:a:h
