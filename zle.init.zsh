@@ -34,16 +34,19 @@ zle -A emacs-forward-word forward-word
 
     # menu completion
     '^I'              menu-complete       '^[[Z'        reverse-menu-complete
-    -q -M menuselect  '^[[1;2C'           history-incremental-search-forward
-    -q -M menuselect  '^[[1;2D'           history-incremental-search-backward
-    -q -M menuselect  '^[^M'              accept-and-infer-next-history
-    -q -M menuselect  '^[[5~'             backward-word
-    -q -M menuselect  '^[[6~'             forward-word
-    -q -M menuselect  '^[[5~'             backward-word
-    -q -M menuselect  '^[[Z'              reverse-menu-complete
-    -q -M menuselect  '^['                send-break
-    -q -M menuselect  '^[[I'              redisplay
-    -q -M menuselect  '^[[O'              redisplay
+  
+    -q -M menuselect  ${key[Backspace]:-'^?'} send-break
+    -q -M menuselect  '^['                    send-break
+    -q -M menuselect  '^[[1;2C'               history-incremental-search-forward
+    -q -M menuselect  '^[[1;2D'               history-incremental-search-backward
+    -q -M menuselect  '^[[5~'                 backward-word
+    -q -M menuselect  '^[[5~'                 backward-word
+    -q -M menuselect  '^[[6~'                 forward-word
+    -q -M menuselect  '^[[Z'                  reverse-menu-complete
+    -q -M menuselect  '^[^M'                  accept-and-infer-next-history
+
+    -q -M menuselect  '^[[I'                  redisplay
+    -q -M menuselect  '^[[O'                  redisplay
   )
 
   (( $+widgets[zle-focus] ))  ||  map+=( '^[[I' blank-key )
