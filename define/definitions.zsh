@@ -7,4 +7,5 @@ $ZDOTDIR/define/functions.zsh autoload
 $ZDOTDIR/define/hooks.zsh add-zsh-hook
 $ZDOTDIR/define/sources.zsh source
 $ZDOTDIR/define/widgets.zsh zle -N
+$ZDOTDIR/define/bindkey.zsh bindkey
 $ZDOTDIR/define/aliases.zsh alias
