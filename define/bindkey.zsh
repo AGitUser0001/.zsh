@@ -15,8 +15,8 @@
 '^[[F'            end-of-line         '^[[1;5C'     forward-word
 
 # other
+'^D' undefined-key
 '^[[I'            zle-focus           '^[[O'        zle-blur
--M menuselect '^[[I' redisplay '^[[O' redisplay
 #if (( ! $+widgets[zle-focus] ))
 '^[[I' blank-key
 #fi
@@ -30,12 +30,15 @@ ${key[PageDown]:-'^[[6~'}               history-incremental-search-forward
 
 # menu completion
 '^I'              menu-complete       '^[[Z'        reverse-menu-complete
--M menuselect  ${key[Backspace]:-'^?'}  send-break
--M menuselect  '^['                     send-break
--M menuselect  '^[[1;2C'                history-incremental-search-forward
--M menuselect  '^[[1;2D'                history-incremental-search-backward
--M menuselect  '^[[5~'                  backward-word
--M menuselect  '^[[5~'                  backward-word
--M menuselect  '^[[6~'                  forward-word
--M menuselect  '^[[Z'                   reverse-menu-complete
--M menuselect  '^[^M'                   accept-and-infer-next-history
+
+#flags -M menuselect
+${key[Backspace]:-'^?'}  send-break
+'^['                     send-break
+'^[[1;2C'                history-incremental-search-forward
+'^[[1;2D'                history-incremental-search-backward
+'^[[5~'                  backward-word
+'^[[6~'                  forward-word
+'^[[Z'                   reverse-menu-complete
+'^[^M'                   accept-and-infer-next-history
+
+'^[[I'  redisplay '^[[O' redisplay
