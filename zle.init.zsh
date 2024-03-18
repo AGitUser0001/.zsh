@@ -30,8 +30,6 @@ zle -A emacs-forward-word forward-word
 
     # other
     '^[[I'            zle-focus           '^[[O'        zle-blur
-    '^D'              exit
-
     # menu completion
     '^I'              menu-complete       '^[[Z'        reverse-menu-complete
   

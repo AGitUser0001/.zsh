@@ -20,5 +20,6 @@ zmv
 
 bracketed-paste-url-magic
 chpwd_recent_dirs
+edit-command-line
 url-quote-magic
 zsh_directory_name_cdr
