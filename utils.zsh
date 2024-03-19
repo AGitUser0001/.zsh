@@ -1,6 +1,6 @@
 trim() {
   builtin enable emulate setopt read printf
-  builtin emulate -LR zsh
+  builtin emulate -L zsh
   builtin setopt extended_glob
   
   local text="$*"
@@ -11,7 +11,7 @@ trim() {
 
 clear() {
   builtin enable emulate setopt source
-  builtin emulate -LR zsh
+  builtin emulate -L zsh
   builtin setopt extended_glob
 
   local reply=(clear E3)
@@ -20,7 +20,7 @@ clear() {
 
 erase() {
   builtin enable emulate setopt source
-  builtin emulate -LR zsh
+  builtin emulate -L zsh
   builtin setopt extended_glob
 
   local reply=('cup 0 0' ed)
@@ -56,7 +56,7 @@ define() {
 }
 
 zle-push() {
-  builtin emulate -LR zsh
+  builtin emulate -L zsh
   if [[ ! -t 1 ]] return
   while { builtin read -rskt } { ZLE_PUSH+=$REPLY; }
 }
