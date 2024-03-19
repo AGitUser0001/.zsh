@@ -1,5 +1,4 @@
 autoload -Uz $fpath[1]/zle/**/--?*(-N^/)
-zle -A emacs-forward-word forward-word
 
 () {
   local i

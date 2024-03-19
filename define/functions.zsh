@@ -1,6 +1,5 @@
 #flags -RUz
-$fpath[1]/**/[!_]*(-N^/)
-$fpath[1]/**/__?*(-N^/)
+$fpath[1]/**(-N^/)
 
 add-zle-hook-widget
 add-zsh-hook

@@ -1,6 +1,5 @@
 $ZDOTDIR/pyutils.zsh
-$ZDOTDIR/zle.init.zsh
-$ZDOTDIR/zstyle.init.zsh
+# $ZDOTDIR/zstyle.init.zsh
 
 #if compinit -C
 $ZDOTDIR/comp.init.zsh

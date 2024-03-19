@@ -40,6 +40,13 @@ zle-push
   }
 }
 
+() {
+  local i
+  for i ( $functions[(I)--?*] ) {
+    [[ $functions_source[$i] == $fpath[1]/zle/(*/|)--?* ]] && zle -N -- "${i#--}" "$i"
+  }
+}
+
 LASTCMDSTART=-1
 elapsed=( )
 

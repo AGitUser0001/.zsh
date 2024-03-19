@@ -12,14 +12,15 @@ $ZDOTDIR/define/variables.zsh typeset -g
 # Autoloaded functions
 $ZDOTDIR/define/functions.zsh autoload
 
-# Custom zsh hooks
+# Custom zsh hooks and styles
+$ZDOTDIR/define/styles.zsh zstyle
 $ZDOTDIR/define/hooks.zsh add-zsh-hook
 
 # Source files
 $ZDOTDIR/define/sources.zsh source
 
 # ZLE widgets and key bindings
-$ZDOTDIR/define/widgets.zsh zle -N
+$ZDOTDIR/define/widgets.zsh zle
 $ZDOTDIR/define/bindkey.zsh bindkey
 
 # User aliases
