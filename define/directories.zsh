@@ -1,11 +1,11 @@
-Code=~/Code
 Unity=~/Library/Unity
 
 # Apache
-Sites=~/Sites
 www=${${:-~/Sites/www}:A}
+httpd=$HOMEBREW_PREFIX/etc/httpd
+
 
 # Cloud Services
 OneDrive=${${:-~/OneDrive}:A}
 GoogleDrive=${${:-~/Google Drive}:A}
-iCloudDrive=~/Library/"Mobile Documents"/com~apple~CloudDocs
+iCloud=~/Library/"Mobile Documents"/com~apple~CloudDocs
