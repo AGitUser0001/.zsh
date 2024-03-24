@@ -1,7 +1,7 @@
 Unity=~/Library/Unity
 
 # Apache
-www=${${:-~/Sites/www}:A}
+www=$HOMEBREW_PREFIX/var/www
 httpd=$HOMEBREW_PREFIX/etc/httpd
 
 
