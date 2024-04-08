@@ -14,5 +14,6 @@
 ':prompt:X:git:*:dirty:*'     symbol            '*'
 
 #if [[ -d ~/.history ]]
-':chpwd:'                     recent-dirs-file  ~/.history/.chpwd_recent_dirs
+':chpwd:'                     recent-dirs-file  ~/.history/.chpwd-recent-dirs
 #fi
+':chpwd:'                     recent-dirs-max   100000
