@@ -12,3 +12,7 @@
 ':completion:*'               special-dirs      true
 
 ':prompt:X:git:*:dirty:*'     symbol            '*'
+
+#if [[ -d ~/.history ]]
+':chpwd:'                     recent-dirs-file  ~/.history/.chpwd_recent_dirs
+#fi
