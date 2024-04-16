@@ -1,7 +1,7 @@
 zle-push
 
 source $ZDOTDIR/config/zshrc
-define $ZDOTDIR/define/definitions.zsh
+define $ZDOTDIR/definitions
 
 __reset-tty
 __reset

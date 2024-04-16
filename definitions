@@ -1,0 +1,27 @@
+# ZSH modules and options
+$ZDOTDIR/define/modules zmodload
+$ZDOTDIR/define/options setopt
+
+# Named directories
+$ZDOTDIR/define/directories hash -d
+
+# Environment and shell variables
+$ZDOTDIR/define/environment export
+$ZDOTDIR/define/variables typeset -g
+
+# Autoloaded functions
+$ZDOTDIR/define/functions autoload
+
+# Custom zsh hooks and styles
+$ZDOTDIR/define/styles zstyle
+$ZDOTDIR/define/hooks add-zsh-hook
+
+# Source files
+$ZDOTDIR/define/sources source
+
+# ZLE widgets and key bindings
+$ZDOTDIR/define/widgets zle
+$ZDOTDIR/define/bindkey bindkey
+
+# User aliases
+$ZDOTDIR/define/aliases alias
