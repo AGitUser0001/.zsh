@@ -9,6 +9,12 @@ git clone git@github.com:AGitUser0001/.zsh.git;
 
 ## Folders
 
+#### ./cache:
+Caches for zsh, mainly .zcompcache and .zcompdump.
+
+#### ./history:
+Local ZSH history. Do not initialize submodule.
+
 #### ./config:
 Generated configuration by the installer script.
 
