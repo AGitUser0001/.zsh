@@ -55,13 +55,8 @@ HISTFILE=$HISTFILE:a
 echo 'Entering configuration'
 echo
 
-read -r '?Delete existing history (you should do this on first install!)? (yes/no): '
-if [[ $REPLY == yes ]] {
-  /bin/rm -- "$DIR/.zsh_history"
-}
-
-OUT=$DIR/.zsh_history
-if [[ -e $HISTFILE && $HISTFILE != $DIR/.zsh_history ]] {
+OUT=$DIR/history/.zsh_history
+if [[ -e $HISTFILE && $HISTFILE != $OUT ]] {
   read -r '?Would you like to import history from '$HISTFILE'? (yes/no): '
   if [[ $REPLY == yes ]] {
     < "$HISTFILE" >> $OUT
