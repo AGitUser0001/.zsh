@@ -1,1 +1,1 @@
-* * * * * zsh -ic 'compinit -u $ZDOTDIR/cache/.zcompdump'
+* * * * * zsh -ic 'compinit -u -d $ZDOTDIR/cache/.zcompdump'
