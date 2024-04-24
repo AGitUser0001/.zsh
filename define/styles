@@ -13,12 +13,8 @@
 
 ':prompt:X:git:*:dirty:*'     symbol            '*'
 
-#if [[ -d ~/.history ]]
 ':chpwd:'                     recent-dirs-file  $ZDOTDIR/history/.chpwd-recent-dirs
-#fi
 ':chpwd:'                     recent-dirs-max   100000
 
-#if [[ -d ~/.cache/zsh/ ]]
 ':completion:*'               use-cache         on
 ':completion:*'               cache-path        $ZDOTDIR/cache/.zcompcache
-#fi
