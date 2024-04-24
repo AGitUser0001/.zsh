@@ -9,9 +9,11 @@ $ZDOTDIR/comp.init.zsh
 "/Applications/Visual Studio Code.app/Contents/Resources/app/out/vs/workbench/contrib/terminal/browser/media/shellIntegration-rc.zsh"
 #fi
 
+#if [[ -e $HB_CNF_HANDLER ]]
 $HB_CNF_HANDLER
-#if (( ! ZSH_DEBUG ))
+#fi
 
+#if (( ! ZSH_DEBUG ))
 #if [[ -e $HOMEBREW_PREFIX/share/zsh-autosuggestions/zsh-autosuggestions.zsh ]]
 $HOMEBREW_PREFIX/share/zsh-autosuggestions/zsh-autosuggestions.zsh
 #exec ZSH_AUTOSUGGEST_STRATEGY=( history completion )
@@ -21,5 +23,4 @@ $HOMEBREW_PREFIX/share/zsh-autosuggestions/zsh-autosuggestions.zsh
 $HOMEBREW_PREFIX/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
 #exec ZSH_HIGHLIGHT_HIGHLIGHTERS+=( brackets )
 #fi
-
 #fi
