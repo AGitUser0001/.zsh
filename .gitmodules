@@ -2,3 +2,4 @@
 	path = history
 	url = git@github.com:AGitUser0001/history.git
 	ignore = all
+	branch = main
