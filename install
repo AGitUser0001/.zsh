@@ -133,8 +133,8 @@ for OUT IN ( ${(@kv)links} ) {
   if [[ $OUT:P == $IN:P ]] {
     printf '%s already linked to %s\n' "$OUT" "$IN"
   } else {
-    if [[ -e $OUT ]] {
-      printf 'removing existing file at %s\n' "$OUT"
+    if [[ -L $OUT ]] {
+      printf 'removing existing link at %s\n' "$OUT"
       /bin/rm $OUT
     }
     /bin/ln -s $IN $OUT
