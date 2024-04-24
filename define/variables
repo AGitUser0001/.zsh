@@ -9,7 +9,9 @@ chpwd_functions=( $chpwd_functions update_terminal_cwd )
 #fi
 #fi
 
+#if [[ -e /usr/libexec/path_helper ]]
 #exec /usr/libexec/path_helper -s | source /dev/stdin
+#fi
 path=( $zpath $path )
 
 fpath=( $ZDOTDIR/functions $ZDOTDIR/functions/**(-/N) $HOMEBREW_PREFIX/opt/curl/share/zsh/site-functions $HOMEBREW_PREFIX/share/zsh-completions $HOMEBREW_PREFIX/share/zsh/site-functions $HOMEBREW_PREFIX/share/zsh/functions $fpath )
