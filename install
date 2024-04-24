@@ -15,6 +15,23 @@ trap 'exit $?' INT ERR QUIT TERM
 read -r '?Would you like to enter setup? (yes/no): '
 if [[ $REPLY != yes ]] return;
 
+echo
+echo 'Reading configuration variables'
+
+readconf() {
+  if [[ ! -v 2 ]] 2=${(P)1};
+  if [[ -v commands[zsh] ]] {
+    - zsh -lic 'builtin printf "%s" "${'$1'-'${(qq)2}'}"' | read -rd '' "$1" && true;
+  }
+  if [[ -z ${(P)1} ]] typeset $1=$2;
+}
+
+let SAVEHIST=10000000 HISTSIZE=100000
+readconf HISTFILE
+readconf SAVEHIST
+readconf HISTSIZE
+HISTFILE=$HISTFILE:a
+
 REPLY=$DIR
 vared -p 'Install path: ' REPLY;
 while [[ -e $REPLY:a && $REPLY:a != $DIR ]] {
@@ -34,23 +51,6 @@ if [[ $OUT:P == $IN ]] {
 } else {
   /bin/ln -s "$IN" "$OUT"
 }
-
-echo
-echo 'Reading configuration variables'
-
-readconf() {
-  if [[ ! -v 2 ]] 2=${(P)1};
-  if [[ -v commands[zsh] ]] {
-    - zsh -lic 'builtin printf "%s" "${'$1'-'${(qq)2}'}"' | read -rd '' "$1" && true;
-  }
-  if [[ -z ${(P)1} ]] typeset $1=$2;
-}
-
-let SAVEHIST=10000000 HISTSIZE=100000
-readconf HISTFILE
-readconf SAVEHIST
-readconf HISTSIZE
-HISTFILE=$HISTFILE:a
 
 echo 'Entering configuration'
 echo
