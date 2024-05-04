@@ -36,6 +36,7 @@ define() {
   local flags= stack=() command= file=$1 REPLY= reply=
   builtin shift
   while builtin read -r command || [[ $command ]] {
+
     case $command {
       ('');;
       (\#*)
