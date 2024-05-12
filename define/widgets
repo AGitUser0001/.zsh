@@ -1,7 +1,7 @@
-#flags -N
+#args -N
 bracketed-paste bracketed-paste-url-magic
 self-insert url-quote-magic
 edit-command-line
 
-#flags -A
+#args -A
 emacs-forward-word forward-word

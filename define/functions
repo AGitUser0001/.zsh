@@ -1,4 +1,4 @@
-#flags -RUz
+#args -RUz
 $fpath[1]/**(-N^/)
 
 add-zle-hook-widget

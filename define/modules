@@ -11,9 +11,9 @@ zsh/zselect
 zsh/nearcolor
 #fi
 
-#flags -F
+#args -F
 zsh/stat b:zstat
-#flags --
+#args --
 
 zsh/attr
 zsh/curses
