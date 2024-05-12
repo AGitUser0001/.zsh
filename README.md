@@ -29,7 +29,7 @@ $ZDOTDIR/define/filename command args
 Crontabs that will be asked to be installed by the installer script.
 
 ### functions:
-See [functions](#functions) below.
+See [functions](#functions-1) below.
 
 ## Functions
 Functions are under the ./functions folder.
