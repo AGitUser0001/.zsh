@@ -19,17 +19,44 @@ Local ZSH history. Do not initialize submodule.
 Generated configuration by the installer script.
 
 ### define
-Various definition files. The definitions.zsh contain which files will be prepended by what command in this format:
-
-```zsh
-$ZDOTDIR/define/filename command args
-```
+See [definitions](#definition-files) below.
 
 ### crontab
 Crontabs that will be asked to be installed by the installer script.
 
 ### functions
 See [functions](#functions-1) below.
+
+## Definition Files
+Various definition files. The ./definitions file contain which files will be run in this format:
+
+```zsh
+$ZDOTDIR/define/filename <...prepend>
+```
+
+Each line of each definition file will be run like this:
+
+```zsh
+<...prepend> <...args> <line>
+```
+
+Unless the line is a comment (starts with a hash), in which case it will depend on the action:
+
+```zsh
+# comment
+#args <...args>
+
+#if <eval>
+#elif <eval>
+#else
+#fi
+
+#exec <eval>
+```
+The if and elif control whether the following code will be run depending on the status code.
+The else inverts the stored status code in the if stack.
+The fi pops the status code stack.
+<eval> is a placeholder for code to be evaluated.
 
 ## Functions
 Functions are under the ./functions folder.
