@@ -10,6 +10,7 @@ SETUP='builtin emulate -L zsh; builtin setopt extended_glob magic_equal_subst bs
 builtin eval "${SETUP#*;}";
 export PATH FPATH CDPATH MODULE_PATH
 export CPPFLAGS='-I'$HOMEBREW_PREFIX'/opt/openjdk/include'
+export JAVA_HOME=$HOMEBREW_PREFIX'/opt/openjdk/libexec/openjdk.jdk/Contents/Home'
 
 PS4='%F{red}+%e %N:%i %D{.%6.}> %f'
 if (( ZSH_DEBUG )) zmodload zsh/zprof
