@@ -49,7 +49,7 @@ define() {
         (elif) if (( stack[-1] )) { builtin eval "$data"; stack[-1]=$? } else { stack[-1]=0 } ;;
         (else) stack[-1]=$(( !stack[-1] ));; (fi) builtin shift -p stack;;
         (exec) if (( 0${(j"")stack} == 0 )) { builtin eval "$data"; }; ;;
-        (*) builtin print -u2 "$funcstack[1]: invalid action: $action";;;
+        (*) console:error invalid action: $action;;;
       };;
       (*) if (( 0${(j"")stack} == 0 )) { builtin eval "${(q)@}" $args $command; }; ;;
     }
@@ -60,4 +60,14 @@ zle-push() {
   builtin emulate -L zsh
   if [[ ! -t 1 ]] return
   while { builtin read -rskt } { ZLE_PUSH+=$REPLY; }
+}
+
+console:error() {
+  builtin emulate -L zsh
+  builtin print -u2 $functrace[0]${1:+: $1};
+}
+
+console:log() {
+  builtin emulate -L zsh
+  builtin print -u1 $functrace[0]${1:+: $1};
 }

@@ -16,7 +16,7 @@ while [[ $1 == -* ]] {
     builtin shift
     builtin break;;
     (-*)
-    builtin print -u2 $0: invalid argument: $1; return;;
+    console:log invalid argument: $1; return;;
   }
 }
 
