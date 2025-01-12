@@ -56,7 +56,7 @@ Unless the line is a comment (starts with a hash), in which case it will depend 
 The if and elif control whether the following code will be run depending on the status code.
 The else inverts the stored status code in the if stack.
 The fi pops the status code stack.
-<eval> is a placeholder for code to be evaluated.
+\<eval\> is a placeholder for code to be evaluated.
 
 ## Functions
 Functions are under the ./functions folder.
