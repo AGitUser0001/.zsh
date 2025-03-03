@@ -1,0 +1,1 @@
+ssh -o StrictHostKeychecking=no -o UserKnownHostsFile=/dev/null "$@"
