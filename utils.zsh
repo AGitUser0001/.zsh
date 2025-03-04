@@ -64,10 +64,10 @@ zle-push() {
 
 console:error() {
   builtin emulate -L zsh
-  builtin print -u2 $functrace[0]${1:+: $1};
+  builtin print -u2 $funcstack[-1]${1:+: $1};
 }
 
 console:log() {
   builtin emulate -L zsh
-  builtin print -u1 $functrace[0]${1:+: $1};
+  builtin print -u1 $funcstack[-1]${1:+: $1};
 }

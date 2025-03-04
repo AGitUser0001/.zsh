@@ -1,0 +1,7 @@
+builtin emulate -L zsh
+
+if (( $+commands[debugpy] )) {
+  debugpy "$@"
+} else {
+  console:error 'debugpy not loaded'
+}
