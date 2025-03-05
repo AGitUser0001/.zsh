@@ -1,1 +1,3 @@
+builtin emulate -L zsh
+
 ssh -o StrictHostKeychecking=no -o UserKnownHostsFile=/dev/null "$@"

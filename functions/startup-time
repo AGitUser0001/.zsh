@@ -1,3 +1,6 @@
+builtin emulate -L zsh
+builtin enable shift
+
 if [[ $1 == -l ]] {
   builtin shift;
   if [[ $1 == -- ]] builtin shift;
