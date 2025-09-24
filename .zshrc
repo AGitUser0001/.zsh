@@ -55,14 +55,17 @@ TITLE=''
 TABTITLE=''
 WORDCHARS='*?'
 
-PS1=$'%K{blue} %3~ %F{blue}%(4V"%K{%1v}%F{%2v} %B%3v%4v%5v%b %F{%1v}")%K{%6v}%F{%7v} %8vs %f%k%-50(l" "\n%k%f)%(#"%B%F{red}%b")%# %f'
+PS1=$'%K{blue} %3~ '\
+$'%F{blue}%(4V"%K{%1v}%F{%2v} %B%3v%4v%5v%b %F{%1v}")'\
+$'%K{%(?.green.red)}%F{white} %(9V"${${$(( $? >= 100 || $? <= -10 ))/0/}:+$?}${${$(( $? >= 10 && $? < 100 ))/0/}:+*$?}'\
+$'${${$(( $? >= 0 && $? < 10 ))/0/}:+<$?>}${${$(( $? > -10 && $? < 0 ))/0/}:+*$?}"---) %F{%(?.green.red)}'\
+$'%K{%6v}%F{%7v} %8vs %f%k%-50(l" "\n%k%f)%(#"%B%F{red}%b")%# %f'
 PS2=$'%K{208}%F{black} $(
   builtin eval "$SETUP"
   printf %s ${${(j"  ")${${=${(%):-%_}}}}[1,-12]}
 ) %k%f%b%s %(#"%B%F{red}%#%b%f"%#) '
 PS3=$'%K{green}%F{black} ? %k%f%b%s '
 PS4='%K{red}%F{white} %e %N:%i %D{.%6.} %k%f%b%s '
-RPS1=$'%(9V.%(?..%K{red}%f %? ).)'
 SPROMPT="%K{8} '%R' to '%r'  [n]o  yes  abort  edit %k%f%b%s "
 
 __reset
