@@ -5,8 +5,8 @@ $ZDOTDIR/pyutils.zsh
 $ZDOTDIR/comp.init.zsh
 #fi
 
-#if [[ -e $HB_CNF_HANDLER ]]
-$HB_CNF_HANDLER
+#if [[ -e $HOMEBREW_COMMAND_NOT_FOUND_HANDLER ]]
+$HOMEBREW_COMMAND_NOT_FOUND_HANDLER
 #fi
 
 #if (( ! ZSH_DEBUG ))

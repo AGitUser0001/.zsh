@@ -15,7 +15,7 @@ LESS="$LESS -r"
 LESS="$LESS -i"
 #fi
 
-#if [[ -z $HB_CNF_HANDLER ]]
-HB_CNF_HANDLER="$HOMEBREW_PREFIX/Library/Taps/homebrew/homebrew-command-not-found/handler.sh"
+#if [[ -z $HOMEBREW_COMMAND_NOT_FOUND_HANDLER ]]
+HOMEBREW_COMMAND_NOT_FOUND_HANDLER="$HOMEBREW_PREFIX/Library/Homebrew/command-not-found/handler.sh"
 #fi
 HOMEBREW_BOOTSNAP=1
