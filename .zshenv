@@ -6,7 +6,8 @@ typeset -x ZPATH PATH FPATH CDPATH MODULE_PATH
 typeset -U zpath path fpath cdpath module_path ZPATH PATH FPATH CDPATH MODULE_PATH
 typeset -T ZPATH zpath
 
-SETUP='builtin emulate -L zsh; builtin setopt extended_glob magic_equal_subst bsd_echo glob_star_short prompt_subst brace_ccl rematch_pcre;'
+SETUP_OPTIONS=(extended_glob magic_equal_subst bsd_echo glob_star_short prompt_subst brace_ccl rematch_pcre)
+SETUP='builtin emulate -L zsh; builtin setopt $SETUP_OPTIONS;'
 builtin eval "${SETUP#*;}";
 export PATH FPATH CDPATH MODULE_PATH
 export CPPFLAGS='-I'$HOMEBREW_PREFIX'/opt/openjdk/include'
