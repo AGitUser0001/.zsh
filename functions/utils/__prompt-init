@@ -30,7 +30,7 @@ if [[ $CURRENT_GIT_BRANCH ]] {
 } else { psvar[1,5]=( "" "" "" "" "" ) }
 
 local fgcolour bgcolour
-local -F 2 diff=$elapsed[-1]
+local -F 3 diff=$elapsed[-1]
 curcontext=":time"
 curcontext="$curcontext:*"
 

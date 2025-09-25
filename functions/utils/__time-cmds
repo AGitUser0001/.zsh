@@ -1,6 +1,6 @@
 builtin eval "$SETUP"
 if (( ! __CHECKEDTIME )) {
-  elapsed+=( $(( LASTCMDSTART >= 0 ? EPOCHREALTIME - LASTCMDSTART : 0.0 )) )
+  elapsed+=( $(( LASTCMDSTART >= 0 ? max(0, EPOCHREALTIME - LASTCMDSTART - 0.012) : 0.0 )) )
   CMDRAN=$(( LASTCMDSTART >= 0 ))
   LASTCMDSTART=-1 __CHECKEDTIME=1
 }
