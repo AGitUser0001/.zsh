@@ -1,1 +1,11 @@
 # Debug File
+#switch abc
+#case a*
+print a
+#continue
+#case *c
+print c
+#continue
+#case *z
+print z
+#done
