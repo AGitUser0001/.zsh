@@ -7,9 +7,8 @@ zsh/terminfo
 zsh/zpty
 zsh/zselect
 
-#if [[ ! $COLORTERM = *(24bit|truecolor)* ]]
+#@if [[ ! $COLORTERM = *(24bit|truecolor)* ]]
 zsh/nearcolor
-#fi
 
 #args -F
 zsh/stat b:zstat

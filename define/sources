@@ -1,22 +1,18 @@
 $ZDOTDIR/pyutils.zsh
 # $ZDOTDIR/zstyle.init.zsh
 
-#if compinit -C -d $ZDOTDIR/cache/.zcompdump
-$ZDOTDIR/comp.init.zsh
-#fi
+#@if compinit -C -d $ZDOTDIR/cache/.zcompdump
+  $ZDOTDIR/comp.init.zsh
 
-#if [[ -e $HOMEBREW_COMMAND_NOT_FOUND_HANDLER ]]
-$HOMEBREW_COMMAND_NOT_FOUND_HANDLER
-#fi
+#@if [[ -e $HOMEBREW_COMMAND_NOT_FOUND_HANDLER ]]
+  $HOMEBREW_COMMAND_NOT_FOUND_HANDLER
 
 #if (( ! ZSH_DEBUG ))
-#if [[ -e $HOMEBREW_PREFIX/share/zsh-autosuggestions/zsh-autosuggestions.zsh ]]
-$HOMEBREW_PREFIX/share/zsh-autosuggestions/zsh-autosuggestions.zsh
-#exec ZSH_AUTOSUGGEST_STRATEGY=( history completion )
-#fi
+  #@if [[ -e $HOMEBREW_PREFIX/share/zsh-autosuggestions/zsh-autosuggestions.zsh ]]
+    $HOMEBREW_PREFIX/share/zsh-autosuggestions/zsh-autosuggestions.zsh
+    #+exec ZSH_AUTOSUGGEST_STRATEGY=( history completion )
 
-#if [[ -e $HOMEBREW_PREFIX/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh ]]
-$HOMEBREW_PREFIX/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
-#exec ZSH_HIGHLIGHT_HIGHLIGHTERS+=( brackets )
-#fi
+  #@if [[ -e $HOMEBREW_PREFIX/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh ]]
+    $HOMEBREW_PREFIX/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
+    #+exec ZSH_HIGHLIGHT_HIGHLIGHTERS+=( brackets )
 #fi

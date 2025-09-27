@@ -17,12 +17,12 @@
 # other
 '^D' undefined-key
 '^[[I'            zle-focus           '^[[O'        zle-blur
-#if (( ! $+widgets[zle-focus] ))
+
+#@if (( ! $+widgets[zle-focus] ))
 '^[[I' blank-key
-#fi
-#if (( ! $+widgets[zle-blur] ))
+
+#@if (( ! $+widgets[zle-blur] ))
 '^[[O' blank-key
-#fi
 
 # history search
 ${key[PageUp]:-'^[[5~'}                 history-incremental-search-backward

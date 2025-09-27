@@ -8,14 +8,13 @@ LS_COLORS="di=34:ln=35:so=32:pi=33:ex=31:bd=34;46:cd=34;43:su=30;41:sg=30;46:tw=
 
 GPG_TTY=$TTY
 
-#if [[ $LESS != (*[[:space:]]|)-([^[:space:]]##|)r* ]]
+#@if [[ $LESS != (*[[:space:]]|)-([^[:space:]]##|)r* ]]
 LESS="$LESS -r"
-#fi
-#if [[ $LESS != (*[[:space:]]|)-([^[:space:]]##|)i* ]]
-LESS="$LESS -i"
-#fi
 
-#if [[ -z $HOMEBREW_COMMAND_NOT_FOUND_HANDLER ]]
+#@if [[ $LESS != (*[[:space:]]|)-([^[:space:]]##|)i* ]]
+LESS="$LESS -i"
+
+#@if [[ -z $HOMEBREW_COMMAND_NOT_FOUND_HANDLER ]]
 HOMEBREW_COMMAND_NOT_FOUND_HANDLER="$HOMEBREW_PREFIX/Library/Homebrew/command-not-found/handler.sh"
-#fi
+
 HOMEBREW_BOOTSNAP=1

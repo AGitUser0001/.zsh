@@ -58,6 +58,32 @@ The else inverts the stored status code in the if stack.
 The fi pops the status code stack.
 \<eval\> is a placeholder for code to be evaluated.
 
+```zsh
+#@1 if false
+  echo will-not-print
+echo will-print
+#@if false
+  echo same-result
+
+#@2 if false
+  echo will-not-print
+  #exec echo will-not-print
+  echo same
+  #+exec echo will-not-print
+#exec echo will-print
+echo will-print
+
+#if false
+  echo a
+  #@2
+  echo b
+  #@if false
+    echo c
+echo will-print
+```
+The @n applies the status for the next N lines. @ is a shorthand for @1.
+When nested, the parent status line remaining count will decrement, but only pop once the child status pops.
+
 ## Functions
 Functions are under the ./functions folder.
 This folder also contains several subfolders:

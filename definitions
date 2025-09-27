@@ -25,3 +25,6 @@ $ZDOTDIR/define/bindkey bindkey
 
 # User aliases
 $ZDOTDIR/define/aliases alias
+
+#@if (( ZSH_DEBUG ))
+$ZDOTDIR/define/debug --
