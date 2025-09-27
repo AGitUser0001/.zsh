@@ -1,6 +1,21 @@
 # Debug File
-#label a
+#function
 echo a
+ls
+#if [[ $abc == helloworld ]]
+abc=alt
+print abc is now $abc
+#return 5
+#fi
+abc=def
+print abc is now $abc
+#@2 if (( RANDOM > 20000 ))
+abc=helloworld
+print abc is now $abc
+define:return-status 5
+#end
 
-#if (( RANDOM < 5000 ))
-#goto a
+echo $?
+#@2 if [[ $abc != alt ]]
+print abc is now $abc
+#goto 2

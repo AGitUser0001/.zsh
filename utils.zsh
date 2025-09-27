@@ -29,36 +29,39 @@ erase() {
 
 define() {
   builtin enable emulate print return shift read unset eval
-  local nested_define=0 function_mode=0
+  local nested_define=0 function_mode=0 function_name= name_of_self=$funcstack[1]
   local -a function_args=( )
   if [[ $1 == $'\0function' ]] {
     function_mode=1
     function_args=( "${(@)function_params}" )
+    function_name=$2
   }
   if [[ $1 == $'\0'* ]] {
     nested_define=1
     builtin shift
   }
-  local -a true_argv=( "$@" )
   case $# {
-    (0) builtin print -u2 "Usage: $funcstack[1] <file> [<command>]"; builtin return 1;;
-    (1) 2=$funcstack[1];;
+    (0) builtin print -u2 "Usage: $name_of_self <file> [<command>]"; builtin return 1;;
+    (1) 2=$name_of_self;;
   }
-  local prepend_args env_status=0 env_subcontext=0 define_exit_status=0 line lineNo
-  local -a stack stack_type stack_line stack_autopop lines prepend_command
+  local prepend_args env_status=0 in_env=1 define_exit_status=0 line lineNo
+  local -a stack stack_type stack_line stack_autopop prepend_command env_subcontext
   local -a normal_options=( extended_glob on errexit off ) env_options
-  local -A frame_data functions_start functions_end labels
+  local -A frame_data
   local in_function=0 in_iife=0 in_function_name=
 
   if (( !nested_define )) {
     define:enter-env() {
       local return_status=$?
+      (( in_env++ ))
       options=( $env_options )
-      if [[ $1 != --not-subcontext ]] {
+      if [[ $1 == --not-subcontext || $2 == --not-subcontext ]] {
+        env_subcontext+=( 1 )
+      } else {
         options[errexit]=off
-        env_subcontext=0
+        env_subcontext+=( 0 )
       }
-      if [[ $1 == --passthrough-status ]] {
+      if [[ $1 == --passthrough-status || $2 == --passthrough-status ]] {
         builtin return $return_status
       } else {
         builtin return $env_status
@@ -69,28 +72,51 @@ define() {
       if [[ $1 != --ignore-status ]] {
         env_status=$return_status
       }
-      if (( env_subcontext )) {
-        options[errexit]=$env_options[4]
+      if (( in_env > 0 )) {
+        (( in_env-- )) || true
+        if (( env_subcontext[-1] )) {
+          options[errexit]=$env_options[4]
+        }
+        env_subcontext=( $env_subcontext[1,-2] )
+        env_options=( extended_glob $options[extended_glob] errexit $options[errexit] )
+        options=( $normal_options )
+        if (( in_env )) {
+          options=( $env_options )
+          if (( !env_subcontext[-1] )) {
+            options[errexit]=off
+          }
+        }
       }
-      env_options=( extended_glob $options[extended_glob] errexit $options[errexit] )
-      options=( $normal_options )
-      env_subcontext=1
       builtin return $return_status
     }
     define:push-stack() {
-      stack+=$1;
-      stack_type+=$2;
-      stack_line+=$lineNo;
-      stack_autopop+=$temp_autopop;
+      if (( $#stack >= 63 )) {
+        define:error stack overflow
+        exit
+      } else {
+        stack+=$1;
+        stack_type+=$2;
+        stack_line+=$lineNo;
+        stack_autopop+=$temp_autopop;
+      }
     }
     define:pop-stack() {
       local -A corresponding_type=(
         for 1
         while 1
+        function 2
       )
       if [[ $corresponding_type[$stack_type[-1]] == 1 && $stack[-1] == 0 ]] {
         lineNo=$(( stack_line[-1] - 1 ))
         cont_loop=1
+        builtin return 1
+      }
+      if [[ $corresponding_type[$stack_type[-1]] == 2 && $stack[-1] == 0 ]] {
+        in_function=0
+        if (( in_iife )) {
+          builtin eval 'define:call "$in_function_name"' ${command##\#(@(<->[[:space:]]|)|)(+|)end([[:space:]]|)}
+        }
+        in_iife=0 in_function_name=
         builtin return 1
       }
       builtin shift -p stack stack_type stack_line stack_autopop
@@ -121,29 +147,25 @@ define() {
       }
     }
     define:error() {
-      builtin print -u2 $funcstack[-1]${*:+: $*};
+      builtin print -u2 $funcstack[2]${*:+: $*};
       define:enter-env --not-subcontext
       define:return-status 1
       define:exit-env --ignore-status
     }
     define:call() {
-      local start_lineNo=$functions_start[$1] end_lineNo=$functions_end[$1]
+      local start_lineNo=$functions_start[$1]
       if [[ -z $start_lineNo ]] {
-        define:error start of function not found: "${(q)1}"
-        builtin return 1
-      } elif [[ -z $end_lineNo ]] {
-        define:error end of function not found: "${(q)1}"
+        define:error function not found: "${(q)1}"
         builtin return 1
       }
       builtin shift
       local -a function_params=( "$@" )
-      if (( env_subcontext == 0 )) {
-        define:enter-env --not-subcontext;
-      } else {
-        define:enter-env
-      }
-      define $'\0function' "${(@)true_argv}" <<< "${(pj:\n:)lines[$start_lineNo + 1,$end_lineNo - 1]}"
-      define:exit-env;
+      define:enter-env --not-subcontext;
+      "$name_of_self" $'\0function' "$1" "${(@)internal_args}"
+      define:exit-env
+    }
+    call() {
+      define:call "$@"
     }
     define:return-status() {
       builtin return $1
@@ -152,12 +174,24 @@ define() {
 
   define:exit-env;
 
-  while { builtin read -r line || [[ $line ]] } {
-    lines+=$line
-  } < $1
+  local context_name=${function_name:-$1}
+  if (( !function_mode )) {
+    local -a lines
+    while { builtin read -r line || [[ $line ]] } {
+      lines+=$line
+    } < $1
+    local -A functions_start labels
+    lineNo=1
+  } else {
+    local -A functions_start=( "${(@kv)functions_start}" )
+    local -A labels=( "${(@kv)labels}" )
+    lineNo=$(( start_lineNo + 1 ))
+  }
   builtin unset line
   builtin shift
-  if [[ $1 == $funcstack[1] ]] {
+
+  local -a internal_args=( "$@" )
+  if [[ $1 == $name_of_self ]] {
     argv=($argv[1] $'\0' $argv[2,-1])
   }
   if [[ $1 == "--" ]] {
@@ -167,29 +201,46 @@ define() {
   prepend_command=( "$@" )
   argv=( "${(@)function_args}" )
 
-  for (( lineNo = 1; lineNo <= $#lines + 1; lineNo++ )) {
+  for (( ; lineNo <= $#lines; lineNo++ )) {
     local temp_autopop=0 allow_clean_stack=1 command=$lines[$lineNo] cont_loop=0 statements=()
+    if (( lineNo > $#lines )) {
+      command="# EOF: ${(q)context_name}"
+    } elif (( lineNo < 1 )) {
+      command="# BOF: ${(q)context_name}"
+    }
     if (( ZSH_DEBUG )) {
-      builtin print $lineNo$'\t'"${${:-0${(j"")stack}}:- }"$'\t'${stack_line[-1]}$'\t'${stack_type[-1]}$'\t'${(@q)command}
+      builtin print $context_name$'\t'$lineNo$'\t'"${${:-0${(j"")stack}}:---}"\
+      $'\t'${stack_line[-1]:---}$'\t'${stack_type[-1]:---}$'\t'${stack_autopop[-1]:---}$'\t'${(@q)command}
     }
 
-    if (( in_function )) {
-      if [[ $command == \#(@(<->[[:space:]]|)|)(+|)end([[:space:]]*|) ]] {
-        functions_end[$stack_line[-1]]=$lineNo
-        define:pop-stack
-        in_function=0
-        if (( in_iife )) {
-          builtin eval 'define:call "$in_function_name"' ${command##\#(@(<->[[:space:]]|)|)(+|)end([[:space:]]|)}
+    if (( in_function || function_mode )) {
+      if (( allow_clean_stack )) {
+        while (( $#stack && stack_autopop[-1] == -2 )) {
+          if { ! define:pop-stack; } {
+            break
+          }
         }
-        in_iife=0 in_function_name=
       }
-      continue
+      if [[ $command == \#(@(<->[[:space:]]|)|)(+|)end([[:space:]]*|) ]] {
+        if (( in_function )) {
+          while (( $#stack )) {
+            if { ! define:pop-stack; } {
+              break
+            }
+          }
+        } else {
+          break
+        }
+      }
+      if (( in_function )) {
+        continue
+      }
     }
 
     if [[ $command == '#+'* ]] {
       command="#${command#\#+}"
       allow_clean_stack=0
-    } 
+    }
     if (( allow_clean_stack )) {
       while (( $#stack && stack_autopop[-1] == -2 )) {
         if { ! define:pop-stack; } {
@@ -217,7 +268,7 @@ define() {
       (\#@(<->|));;
       (\#*)
       local action="${${command#\#}%%[[:space:]]*}"
-      local data="${${command#\#}#*[[:space:]]}"
+      local data="${${command#\#}#$action}"
       local trimmed_data="${${data##[[:space:]]#}%%[[:space:]]#}"
       case $action {
         ('');;
@@ -247,29 +298,29 @@ define() {
             stack[-1]=$?
           }; ;;
         (switch)
-        define:push-stack 0 switch;
-        define:enter-env;
-        frame_data[$lineNo]="${(e)trimmed_data}"
-        define:exit-env --ignore-status;;
+          define:push-stack 0 switch;
+          define:enter-env;
+          frame_data[$lineNo]="${(e)trimmed_data}"
+          define:exit-env --ignore-status;;
         (case)
-        define:clean-stack; if (( cont_loop )) { continue; }
-        if [[ $stack_type[-1] == case ]] {
-          local prev_case_status=$stack[-1]
-          define:pop-stack; if (( cont_loop )) { continue; } 
-          define:push-stack $prev_case_status case;
-        } elif [[ $stack_type[-1] == switch ]] {
-          if [[ $stack[-1] == 0 ]] {
-            local switch_data=$frame_data[$stack_line[-1]]
-            define:enter-env
-            [[ "$switch_data" == ${~trimmed_data} ]]
-            define:exit-env --ignore-status
-            define:push-stack $? case;
+          define:clean-stack; if (( cont_loop )) { continue; }
+          if [[ $stack_type[-1] == case ]] {
+            local prev_case_status=$stack[-1]
+            define:pop-stack; if (( cont_loop )) { continue; } 
+            define:push-stack $prev_case_status case;
+          } elif [[ $stack_type[-1] == switch ]] {
+            if [[ $stack[-1] == 0 ]] {
+              local switch_data=$frame_data[$stack_line[-1]]
+              define:enter-env
+              [[ "$switch_data" == ${~trimmed_data} ]]
+              define:exit-env --ignore-status
+              define:push-stack $? case;
+            } else {
+              define:push-stack 1 case;
+            }
           } else {
-            define:push-stack 1 case;
-          }
-        } else {
-          define:error invalid action in context: $action
-        };;
+            define:error invalid action in context: $action
+          };;
         (elif) stack_autopop[-1]=$temp_autopop;
                if (( stack[-1] )) {
                  define:enter-env; builtin eval "$data"; define:exit-env
@@ -287,16 +338,23 @@ define() {
             define:error invalid action in context: $action
           };;
         (return)
-          if (( function_mode )) {
-            define_exit_status=$data
-            break
-          } else {
-            define:enter-env --not-subcontext
-            define:return-status $data
-            define:exit-env
-          };;
+          if (( 0${(j"")stack} == 0 )) {
+            if (( function_mode )) {
+              define_exit_status=$data
+              break
+            } else {
+              define:enter-env --not-subcontext
+              define:return-status $data
+              define:exit-env
+            }
+          }; ;;
         (call)
-          builtin eval 'define:call "$in_function_name"' $data;;
+          local function_name=${trimmed_data%%[[:space:]]*}
+          if [[ -z $function_name ]] {
+            define:error invalid function name: "${(q)trimmed_data}"
+          } else {
+            builtin eval 'define:call "$function_name"' ${data##[[:space:]]#$function_name}
+          };;
         (label) if [[ $trimmed_data == <-> || -z $trimmed_data ]] {
                   define:error invalid label: "${(q)trimmed_data}"
                 } else {
@@ -316,14 +374,20 @@ define() {
                    }
                  }
                }; ;;
-        (function) if [[ -z trimmed_data ]] {
-                     in_iife=1
-                   }
-                   functions_start[$trimmed_data]=$lineNo
-                   in_function=1
-                   in_function_name=$trimmed_data
-                   define:push-stack 0 function;;
-        (end) define:error invalid action in context: $action;;
+        (function) 
+          if [[ $trimmed_data == *[[:space:]]* ]] {
+            define:error invalid function name: "${(q)trimmed_data}"
+            define:push-stack 1 function
+          } else {
+            if [[ -z $trimmed_data ]] {
+              in_iife=1
+            }
+            functions_start[$trimmed_data]=$lineNo
+            in_function=1
+            in_function_name=$trimmed_data
+            define:push-stack 0 function
+          };;
+        (end);&
         (continue);&
         (done);&
         (fi)
@@ -334,6 +398,7 @@ define() {
             while done
             switch done
             case continue
+            function end
           )
           if [[ $stack_type[-1] == case && $stack_type[-2] == switch && $action == done ]] {
             define:pop-stack; if (( cont_loop )) { continue; }
@@ -383,10 +448,10 @@ zle-push() {
 
 console:error() {
   builtin emulate -L zsh
-  builtin print -u2 $funcstack[-1]${*:+: $*};
+  builtin print -u2 $funcstack[2]${*:+: $*};
 }
 
 console:log() {
   builtin emulate -L zsh
-  builtin print -u1 $funcstack[-1]${*:+: $*};
+  builtin print -u1 $funcstack[2]${*:+: $*};
 }
