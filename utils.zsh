@@ -48,6 +48,7 @@ define() {
   local -a stack stack_type stack_line stack_autopop lines prepend_command
   local -a normal_options=( extended_glob on errexit off ) env_options
   local -A frame_data functions_start functions_end labels
+  local in_function=0 in_iife=0 in_function_name=
 
   if (( !nested_define )) {
     define:enter-env() {
@@ -172,6 +173,19 @@ define() {
       builtin print $lineNo$'\t'"${${:-0${(j"")stack}}:- }"$'\t'${stack_line[-1]}$'\t'${stack_type[-1]}$'\t'${(@q)command}
     }
 
+    if (( in_function )) {
+      if [[ $command == \#(@(<->[[:space:]]|)|)(+|)end([[:space:]]*|) ]] {
+        functions_end[$stack_line[-1]]=$lineNo
+        define:pop-stack
+        in_function=0
+        if (( in_iife )) {
+          builtin eval 'define:call "$in_function_name"' ${command##\#(@(<->[[:space:]]|)|)(+|)end([[:space:]]|)}
+        }
+        in_iife=0 in_function_name=
+      }
+      continue
+    }
+
     if [[ $command == '#+'* ]] {
       command="#${command#\#+}"
       allow_clean_stack=0
@@ -204,6 +218,7 @@ define() {
       (\#*)
       local action="${${command#\#}%%[[:space:]]*}"
       local data="${${command#\#}#*[[:space:]]}"
+      local trimmed_data="${${data##[[:space:]]#}%%[[:space:]]#}"
       case $action {
         ('');;
         (args) prepend_args="$data";;
@@ -234,7 +249,7 @@ define() {
         (switch)
         define:push-stack 0 switch;
         define:enter-env;
-        frame_data[$lineNo]="${(e)${${data##[[:space:]]#}%%[[:space:]]#}}"
+        frame_data[$lineNo]="${(e)trimmed_data}"
         define:exit-env --ignore-status;;
         (case)
         define:clean-stack; if (( cont_loop )) { continue; }
@@ -245,9 +260,8 @@ define() {
         } elif [[ $stack_type[-1] == switch ]] {
           if [[ $stack[-1] == 0 ]] {
             local switch_data=$frame_data[$stack_line[-1]]
-            local case_pattern="${${data##[[:space:]]#}%%[[:space:]]#}"
             define:enter-env
-            [[ "$switch_data" == ${~case_pattern} ]]
+            [[ "$switch_data" == ${~trimmed_data} ]]
             define:exit-env --ignore-status
             define:push-stack $? case;
           } else {
@@ -281,25 +295,35 @@ define() {
             define:return-status $data
             define:exit-env
           };;
-        (label) local goto_label="${${data##[[:space:]]#}%%[[:space:]]#}}"
-                if [[ $goto_label == <-> || -z $goto_label ]] {
-                  define:error invalid label: "${(q)goto_label}"
+        (call)
+          builtin eval 'define:call "$in_function_name"' $data;;
+        (label) if [[ $trimmed_data == <-> || -z $trimmed_data ]] {
+                  define:error invalid label: "${(q)trimmed_data}"
                 } else {
-                  labels["$data"]=$lineNo
+                  labels[$trimmed_data]=$lineNo
                 };;
-        (goto) local goto_label="${${data##[[:space:]]#}%%[[:space:]]#}}"
-               if [[ $goto_label == <-> ]] {
-                 lineNo=$(( goto_label - 1 ))
-                 continue
-               } else {
-                 if [[ -n $labels[$goto_label] ]] {
-                   lineNo=$(( labels[$goto_label] - 1 ))
+        (goto) if (( 0${(j"")stack} == 0 )) {
+                 if [[ $trimmed_data == <-> ]] {
+                   lineNo=$(( trimmed_data - 1 ))
                    continue
                  } else {
-                   define:error invalid label: "${(q)goto_label}"
+                   if [[ -n $labels[$trimmed_data] ]] {
+                     lineNo=$(( labels[$trimmed_data] - 1 ))
+                     continue
+                   } else {
+                     define:error invalid label: "${(q)trimmed_data}"
+                     local labels
+                   }
                  }
-               };;
-        (end);&
+               }; ;;
+        (function) if [[ -z trimmed_data ]] {
+                     in_iife=1
+                   }
+                   functions_start[$trimmed_data]=$lineNo
+                   in_function=1
+                   in_function_name=$trimmed_data
+                   define:push-stack 0 function;;
+        (end) define:error invalid action in context: $action;;
         (continue);&
         (done);&
         (fi)
@@ -310,7 +334,6 @@ define() {
             while done
             switch done
             case continue
-            function end
           )
           if [[ $stack_type[-1] == case && $stack_type[-2] == switch && $action == done ]] {
             define:pop-stack; if (( cont_loop )) { continue; }

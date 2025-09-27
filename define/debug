@@ -1,11 +1,6 @@
 # Debug File
-#switch abc
-#case a*
-print a
-#continue
-#case *c
-print c
-#continue
-#case *z
-print z
-#done
+#label a
+echo a
+
+#if (( RANDOM < 5000 ))
+#goto a
