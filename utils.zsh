@@ -199,38 +199,48 @@ define() {
       define:exit-env --ignore-status
     }
     define:call() {
+      local call_target=$1
+      define:call-check-lineNo $call_target || builtin return $?
       if (( tail_call )) {
         tail_call=0
         if (( function_mode )) {
-          if [[ $functions_start[$1] == $start_lineNo ]] {
-            STACK= STACK_TYPE= STACK_LINE= STACK_AUTOPOP= frame_data=( )
-            in_function=0 in_iife=0 in_function_name= define_exit_status=0
-            lineNo=$functions_start[$1]
-            define:ast-restore $lineNo
-            builtin shift
-            function_params=( "$@" ) function_begin=1
-            function_args=( "${(@)function_params}" )
-            cont_loop=1
-            builtin return
+          start_lineNo=$functions_start[$call_target]
+          end_lineNo=$functions_end[$call_target]
+          builtin shift
+          STACK= STACK_TYPE= STACK_LINE= STACK_AUTOPOP= frame_data=( )
+          in_function=0 in_iife=0 in_function_name= define_exit_status=0
+          lineNo=$start_lineNo
+          for (( iter_var = start_lineNo + 1; iter_var < end_lineNo; iter_var++ )) {
+            unset "ast_type[$iter_var]" "ast_line[$iter_var]" "ast_autopop[$iter_var]"
           }
+          function_begin=1
+          function_name=$call_target
+          function_params=( "$@" )
+          function_args=( "${(@)function_params}" )
+          cont_loop=1
+          builtin return 0
         }
       }
-      local function_name=$1
-      local start_lineNo=$functions_start[$function_name]
-      local end_lineNo=$functions_end[$function_name]
-      if [[ -z $start_lineNo ]] {
-        define:error function not found: "${(q)function_name}"
-        builtin return 1
-      }
-      if [[ -z $end_lineNo ]] {
-        define:error end of function not found: "${(q)function_name}"
-        builtin return 1
-      }
+      local start_lineNo=$functions_start[$call_target]
+      local end_lineNo=$functions_end[$call_target]
       builtin shift
       local -a function_params=( "$@" )
       define:enter-env --not-subcontext;
-      "$name_of_self" $'\0function' "$function_name" "${(@)internal_args}"
+      "$name_of_self" $'\0function' "$call_target" "${(@)internal_args}"
       define:exit-env
+    }
+    define:call-check-lineNo() {
+      local call_target=$1
+      local start_lineNo=$functions_start[$call_target]
+      local end_lineNo=$functions_end[$call_target]
+      if [[ -z $start_lineNo ]] {
+        define:error function not found: "${(q)call_target}"
+        builtin return 1
+      }
+      if [[ -z $end_lineNo ]] {
+        define:error end of function not found: "${(q)call_target}"
+        builtin return 1
+      }
     }
     define:return-status() {
       builtin return $1
@@ -465,22 +475,22 @@ define() {
           }; ;;
         (call)
           if (( 0${(j"")stack} == 0 )) {
-            local function_name=${trimmed_data%%[[:space:]]*}
-            if [[ -z $function_name ]] {
+            local call_target=${trimmed_data%%[[:space:]]*}
+            if [[ -z $call_target ]] {
               define:error invalid function name: "${(q)trimmed_data}"
             } else {
-              builtin eval 'define:call "$function_name"' ${data##[[:space:]]#$function_name}
+              builtin eval 'define:call "$call_target"' ${data##[[:space:]]#$call_target}
               if (( cont_loop )) { continue; }
             }
           }; ;;
         (call-and-return)
           if (( 0${(j"")stack} == 0 )) {
-            local function_name=${trimmed_data%%[[:space:]]*}
-            if [[ -z $function_name ]] {
+            local call_target=${trimmed_data%%[[:space:]]*}
+            if [[ -z $call_target ]] {
               define:error invalid function name: "${(q)trimmed_data}"
             } else {
               tail_call=1
-              builtin eval 'define:call "$function_name"' ${data##[[:space:]]#$function_name}
+              builtin eval 'define:call "$call_target"' ${data##[[:space:]]#$call_target}
               if (( cont_loop )) { continue; }
             }
             if (( function_mode )) {
@@ -491,12 +501,12 @@ define() {
         (call-and-end)
           if (( function_mode )) {
             if (( 0${(j"")stack} == 0 )) {
-              local function_name=${trimmed_data%%[[:space:]]*}
-              if [[ -z $function_name ]] {
+              local call_target=${trimmed_data%%[[:space:]]*}
+              if [[ -z $call_target ]] {
                 define:error invalid function name: "${(q)trimmed_data}"
               } else {
                 tail_call=1
-                builtin eval 'define:call "$function_name"' ${data##[[:space:]]#$function_name}
+                builtin eval 'define:call "$call_target"' ${data##[[:space:]]#$call_target}
                 if (( cont_loop )) { continue; }
               }
               if (( function_mode )) {
