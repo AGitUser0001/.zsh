@@ -1,5 +1,14 @@
 # Debug File
-var='a/a\b'
+#function countdown
+echo $1
+#if (( $1 > 0 ))
+  #call-and-return countdown $(( $1 - 1 ))
+#endif
+#end
+
+#call countdown 100
+
+var='a/a\b.c'
 #switch ${var:a}
   #case */*
   ls ${var:a}
@@ -31,8 +40,9 @@ define:return-status 5
 #end
 
 echo $?
-#@if [[ $abc != alt ]]
+#@2 if [[ $abc != alt ]]
 print abc is now $abc
+#goto 2
 
 #until true
 echo 0
@@ -47,3 +57,54 @@ echo B
 echo abc
 echo def
 echo ghi
+
+echo ------------------------------------------------------------
+
+# demo.zsh
+
+# Setup variable
+var="a/b.c"
+count=0
+
+# Simple function
+#function greet
+echo "Inside greet"
+count=$(( count + 1 ))
+#end
+
+# Main
+echo "Start of script"
+
+# Conditional with goto
+#@1 if [[ $var == a/* ]]
+echo "Var matches a/*"
+#goto end_label
+echo "This line should be skipped"
+
+#repeat 3
+echo "Repeat loop, iteration $count"
+count=$(( count + 1 ))
+#done
+
+#while (( count < 5 ))
+echo "While loop, count=$count"
+count=$(( count + 1 ))
+#if (( count == 4 ))
+#goto skip_loop
+#done
+
+#switch ${var:a}
+  #case */*
+  echo "Matched pattern */*"
+  #continue
+  #case *.*
+  echo "Matched pattern *.*"
+#done
+
+#call greet
+
+#label skip_loop
+echo "Skipped to here if goto executed"
+
+#label end_label
+echo "End of script"

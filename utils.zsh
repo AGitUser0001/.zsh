@@ -29,10 +29,10 @@ erase() {
 
 define() {
   builtin enable emulate print return shift read unset eval
-  local nested_define=0 function_mode=0 function_name= name_of_self=$funcstack[1]
+  local nested_define=0 function_mode=0 function_begin=0 tail_call=0 function_name= name_of_self=$funcstack[1]
   local -a function_args=( )
   if [[ $1 == $'\0function' ]] {
-    function_mode=1
+    function_mode=1 function_begin=1
     function_args=( "${(@)function_params}" )
     function_name=$2
   }
@@ -44,9 +44,12 @@ define() {
     (0) builtin print -u2 "Usage: $name_of_self <file> [<command>]"; builtin return 1;;
     (1) 2=$name_of_self;;
   }
-  local prepend_args env_status=0 in_env=1 define_exit_status=0 line lineNo
-  local -a stack stack_type stack_line stack_autopop prepend_command env_subcontext
-  local -a normal_options=( extended_glob on errexit off ) env_options
+  local prepend_args env_status=0 in_env=1 define_exit_status=0 line lineNo iter_var=0
+  local -T STACK stack
+  local -T STACK_TYPE stack_type
+  local -T STACK_LINE stack_line
+  local -T STACK_AUTOPOP stack_autopop
+  local -a prepend_command env_subcontext normal_options=( extended_glob on errexit off ) env_options
   local -A frame_data
   local in_function=0 in_iife=0 in_function_name=
 
@@ -127,6 +130,7 @@ define() {
             builtin return 1
           }
         }
+        functions_end[$in_function_name]=$lineNo
         in_function=0
         if (( in_iife )) {
           builtin eval 'define:call "$in_function_name"' ${command##\#(@(<->[[:space:]]|)|)(+|)end([[:space:]]|)}
@@ -195,19 +199,56 @@ define() {
       define:exit-env --ignore-status
     }
     define:call() {
-      local start_lineNo=$functions_start[$1]
+      if (( tail_call )) {
+        tail_call=0
+        if (( function_mode )) {
+          if [[ $functions_start[$1] == $start_lineNo ]] {
+            STACK= STACK_TYPE= STACK_LINE= STACK_AUTOPOP= frame_data=( )
+            in_function=0 in_iife=0 in_function_name= define_exit_status=0
+            lineNo=$functions_start[$1]
+            define:ast-restore $lineNo
+            builtin shift
+            function_params=( "$@" ) function_begin=1
+            function_args=( "${(@)function_params}" )
+            cont_loop=1
+            builtin return
+          }
+        }
+      }
+      local function_name=$1
+      local start_lineNo=$functions_start[$function_name]
+      local end_lineNo=$functions_end[$function_name]
       if [[ -z $start_lineNo ]] {
-        define:error function not found: "${(q)1}"
+        define:error function not found: "${(q)function_name}"
+        builtin return 1
+      }
+      if [[ -z $end_lineNo ]] {
+        define:error end of function not found: "${(q)function_name}"
         builtin return 1
       }
       builtin shift
       local -a function_params=( "$@" )
       define:enter-env --not-subcontext;
-      "$name_of_self" $'\0function' "$1" "${(@)internal_args}"
+      "$name_of_self" $'\0function' "$function_name" "${(@)internal_args}"
       define:exit-env
     }
     define:return-status() {
       builtin return $1
+    }
+    define:ast-snapshot() {
+      if (( !$+ast_stack[$1] )) {
+        ast_stack[$1]=${STACK//[^:]##/0}
+        ast_type[$1]=$STACK_TYPE
+        ast_line[$1]=$STACK_LINE
+        ast_autopop[$1]=$STACK_AUTOPOP
+      }
+    }
+    define:ast-restore() {
+      STACK=$ast_stack[$1]
+      STACK_TYPE=$ast_type[$1]
+      STACK_LINE=$ast_line[$1]
+      STACK_AUTOPOP=$ast_autopop[$1]
+      (( $+ast_stack[$1] ))
     }
   }
 
@@ -219,12 +260,18 @@ define() {
     while { builtin read -r line || [[ $line ]] } {
       lines+=$line
     } < $1
-    local -A functions_start labels
+    local -A functions_start functions_end labels
+    local -A ast_stack ast_type ast_line ast_autopop
     lineNo=1
   } else {
-    local -A functions_start=( "${(@kv)functions_start}" )
+    local -A functions_start=( "${(@kv)functions_start}" ) functions_end=( "${(@kv)functions_end}" )
     local -A labels=( "${(@kv)labels}" )
+    local -A ast_stack=( "${(@kv)ast_stack}" ) ast_type=( "${(@kv)ast_type}" )
+    local -A ast_line=( "${(@kv)ast_line}" )   ast_autopop=( "${(@kv)ast_autopop}" )
     lineNo=$(( start_lineNo + 1 ))
+    for (( iter_var = start_lineNo + 1; iter_var < end_lineNo; iter_var++ )) {
+      unset "ast_type[$iter_var]" "ast_line[$iter_var]" "ast_autopop[$iter_var]"
+    }
   }
   builtin unset line
   builtin shift
@@ -238,15 +285,19 @@ define() {
   }
 
   prepend_command=( "$@" )
-  argv=( "${(@)function_args}" )
+  argv=( )
 
   for (( ; lineNo <= $#lines; lineNo++ )) {
+    if (( function_begin )) {
+      argv=( "${(@)function_args}" )
+    }
     local temp_autopop=0 allow_clean_stack=1 command=$lines[$lineNo] cont_loop=0 statements=()
     if (( lineNo > $#lines )) {
       command="# EOF: ${(q)context_name}"
     } elif (( lineNo < 1 )) {
       command="# BOF: ${(q)context_name}"
     }
+    define:ast-snapshot $lineNo
     if (( ZSH_DEBUG )) {
       builtin print $context_name$'\t'$lineNo$'\t'"${${:-0${(j"")stack}}:---}"\
       $'\t'${stack_line[-1]:---}$'\t'${stack_type[-1]:---}$'\t'${stack_autopop[-1]:---}$'\t'${(@q)command}
@@ -373,10 +424,14 @@ define() {
           define:exit-env --ignore-status;;
         (case)
           define:clean-stack; if (( cont_loop )) { continue; }
+          if [[ $stack_type[-1] == case && $frame_data[$stack_line[-1]] == continue ]] {
+            define:pop-stack; if (( cont_loop )) { continue; } 
+          }
           if [[ $stack_type[-1] == case ]] {
             local prev_case_status=$stack[-1]
             define:pop-stack; if (( cont_loop )) { continue; } 
             define:push-stack $prev_case_status case;
+            frame_data[$stack_line[-1]]=fallthrough
           } elif [[ $stack_type[-1] == switch ]] {
             if [[ $stack[-1] == 0 ]] {
               local switch_data=$frame_data[$stack_line[-1]]
@@ -387,6 +442,7 @@ define() {
             } else {
               define:push-stack 1 case;
             }
+            frame_data[$stack_line[-1]]=fallthrough
           } else {
             define:error invalid action in context: $action
           };;
@@ -408,12 +464,48 @@ define() {
             }
           }; ;;
         (call)
-          local function_name=${trimmed_data%%[[:space:]]*}
-          if [[ -z $function_name ]] {
-            define:error invalid function name: "${(q)trimmed_data}"
+          if (( 0${(j"")stack} == 0 )) {
+            local function_name=${trimmed_data%%[[:space:]]*}
+            if [[ -z $function_name ]] {
+              define:error invalid function name: "${(q)trimmed_data}"
+            } else {
+              builtin eval 'define:call "$function_name"' ${data##[[:space:]]#$function_name}
+              if (( cont_loop )) { continue; }
+            }
+          }; ;;
+        (call-and-return)
+          if (( 0${(j"")stack} == 0 )) {
+            local function_name=${trimmed_data%%[[:space:]]*}
+            if [[ -z $function_name ]] {
+              define:error invalid function name: "${(q)trimmed_data}"
+            } else {
+              tail_call=1
+              builtin eval 'define:call "$function_name"' ${data##[[:space:]]#$function_name}
+              if (( cont_loop )) { continue; }
+            }
+            if (( function_mode )) {
+              define_exit_status=$env_status
+              break
+            }
+          }; ;;
+        (call-and-end)
+          if (( function_mode )) {
+            if (( 0${(j"")stack} == 0 )) {
+              local function_name=${trimmed_data%%[[:space:]]*}
+              if [[ -z $function_name ]] {
+                define:error invalid function name: "${(q)trimmed_data}"
+              } else {
+                tail_call=1
+                builtin eval 'define:call "$function_name"' ${data##[[:space:]]#$function_name}
+                if (( cont_loop )) { continue; }
+              }
+              if (( function_mode )) {
+                break
+              }
+            }
           } else {
-            builtin eval 'define:call "$function_name"' ${data##[[:space:]]#$function_name}
-          };;
+            define:error invalid action in context: $action
+          }; ;;
         (label) if [[ $trimmed_data == <-> || -z $trimmed_data ]] {
                   define:error invalid label: "${(q)trimmed_data}"
                 } else {
@@ -422,10 +514,12 @@ define() {
         (goto) if (( 0${(j"")stack} == 0 )) {
                  if [[ $trimmed_data == <-> ]] {
                    lineNo=$(( trimmed_data - 1 ))
+                   define:ast-restore $lineNo
                    continue
                  } else {
                    if [[ -n $labels[$trimmed_data] ]] {
                      lineNo=$(( labels[$trimmed_data] - 1 ))
+                     define:ast-restore $lineNo
                      continue
                    } else {
                      define:error invalid label: "${(q)trimmed_data}"
@@ -471,12 +565,12 @@ define() {
                 if (( cont_loop )) { continue; }
               }
             } elif (( ctype == 3 )) {
-              while (( $#stack > cindex )) {
-                if { ! define:pop-stack; } {
-                  break
-                }
+              if (( $#stack > cindex )) {
+                frame_data[$stack_line[$((cindex + 1))]]=continue
+                stack[$((cindex + 1))]=1
+              } else {
+                stack[$cindex]=1
               }
-              if (( cont_loop )) { continue; }
             } else {
               define:error invalid action in context: $action
             }
@@ -521,12 +615,11 @@ define() {
         builtin eval "${(@q)prepend_command}" $prepend_args $command
         define:exit-env
       }
-      local stack_autopop_index=
-      for (( stack_autopop_index = 1; stack_autopop_index <= $#stack_autopop; stack_autopop_index++ )) {
-        if (( stack_autopop[stack_autopop_index] > 0 )) {
-          (( stack_autopop[stack_autopop_index]-- ))
-          if (( stack_autopop[stack_autopop_index] == 0 )) {
-            stack_autopop[$stack_autopop_index]=-2
+      for (( iter_var = 1; iter_var <= $#stack_autopop; iter_var++ )) {
+        if (( stack_autopop[iter_var] > 0 )) {
+          (( stack_autopop[iter_var]-- ))
+          if (( stack_autopop[iter_var] == 0 )) {
+            stack_autopop[$iter_var]=-2
           }
         }
       }; ;;
