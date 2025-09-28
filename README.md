@@ -125,7 +125,7 @@ Until is the same as while, except the condition is negated.
 The switch takes a string that will be expanded, the case takes a shell pattern, done exits switch.
 Continue in switch cases will continue searching the cases, break in switch cases will exit the switch.
 
-Functions take a name parameter and end with `#end`. If the function has no name, it is an iife and will be immediately invoked, in which case you can use `#end [args]`. Named functions can be called with `#call <name> [args]`. A function works by running a nested define. You can return values using `#return <value>`. `#call-and-return <name> [args]` calls a function and returns its result while in a function. Return will set $? outside of a function. Call-and-return will call a function normally outside of a function. `#call-and-end <name> [args]` will call a function and end the current function (return 0) in a function. Outside of a function, `#call-and-end` is invalid.
+Functions take a name parameter and end with `#end`. If the function has no name, it is an iife and will be immediately invoked, in which case you can use `#end [args]`. Named functions can be called with `#call <name> [args]`. A function works by running a nested define. You can return values using `#return <value>`. `#call-and-return <name> [args]` calls a function and returns its result while in a function. Return will set $? outside of a function. Call-and-return will call a function normally when called outside of a function. `#call-and-end <name> [args]` will call a function and end the current function (return 0) when called from a function. Outside of a function, `#call-and-end` is invalid.
 
 Labels take a name, which can have spaces but cannot be a positive integer.
 `#goto <name>` goes to a named label.
