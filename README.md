@@ -64,7 +64,18 @@ echo infinite loop
 #continue <-- skip
 #break <-- stop
 echo a
-#dobe
+#done
+
+#until true
+echo never
+#done
+#until false
+echo infloop
+#done
+
+#repeat 5
+echo repeats 5 times
+#done
 
 #switch ${var:a}
   #case */*
@@ -99,7 +110,9 @@ The endif pops the status code stack.
 
 For loops takes a `initializer; condition; incrementer`, and end with `#done`.
 All three are optional, but there must be two semicolons, and the semicolons must be separated.
+`#repeat <num>` repeats `<num>` times, as a shorthand for `#for`, but with the added advantage of not using a variable.
 While loops take a `condition`, will run until the condition fails, and end with `#done`.
+Until is the same as while, except the condition is negated.
 
 The switch takes a string that will be expanded, the case takes a shell pattern, done exits switch.
 Continue in switch cases will continue searching the cases, break in switch cases will exit the switch.

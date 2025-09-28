@@ -112,17 +112,19 @@ define() {
       if (( ctype == 1 && stack[$cindex] == 0 )) {
         while (( $#stack > cindex )) {
           if { ! define:pop-stack --meta; } {
-            builtin return 0
+            builtin return 1
           }
         }
-        lineNo=$(( stack_line[-1] - 1 ))
-        cont_loop=1
+        if (( stack_line[-1] != lineNo )) {
+          lineNo=$(( stack_line[-1] - 1 ))
+          cont_loop=1
+        }
         builtin return 1
       }
       if (( ctype == 2 && stack[$cindex] == 0 )) {
         while (( $#stack > cindex )) {
           if { ! define:pop-stack --meta; } {
-            builtin return 0
+            builtin return 1
           }
         }
         in_function=0
@@ -148,15 +150,17 @@ define() {
     define:find-last-context-type() {
       local -A corresponding_type=(
         for 1
+        repeat 1
         while 1
+        until 1
         function 2
         switch 3
       )
-      define:find-last-index for while function switch
+      define:find-last-index for repeat while until function switch
       builtin return $corresponding_type[$stack_type[$?]]
     }
     define:find-last-context() {
-      define:find-last-index for while function switch
+      define:find-last-index for repeat while until function switch
       builtin return $?
     }
     define:clean-stack() {
@@ -327,7 +331,23 @@ define() {
             define:enter-env; builtin eval "(( $statements[3] ))"; define:exit-env
             define:enter-env; builtin eval "(( $statements[2] ))"; define:exit-env
             stack[-1]=$?
+            stack_autopop[-1]=$temp_autopop
           }; ;;
+        (repeat) if (( stack_line[-1] != lineNo )) {
+                   frame_data[$lineNo]="${(e)trimmed_data}"
+                   if [[ $frame_data[$lineNo] != <-> ]] {
+                     define:error invalid repeat value: "${(q)frame_data[$lineNo]}"
+                     define:push-stack 1 repeat
+                   } else {
+                     define:push-stack 0 repeat
+                   }
+                 } else {
+                   (( frame_data[$lineNo]-- ))
+                   stack_autopop[-1]=$temp_autopop
+                 }
+                 if (( frame_data[$lineNo] <= 0 )) {
+                   stack[-1]=1
+                 }; ;;
         (while)
           if (( stack_line[-1] != lineNo )) {
             define:enter-env; builtin eval "$data"; define:exit-env
@@ -335,6 +355,16 @@ define() {
           } else {
             define:enter-env; builtin eval "$data"; define:exit-env
             stack[-1]=$?
+            stack_autopop[-1]=$temp_autopop
+          }; ;;
+        (until)
+          if (( stack_line[-1] != lineNo )) {
+            define:enter-env; builtin eval "$data"; define:exit-env
+            define:push-stack $(( $? == 0 )) until
+          } else {
+            define:enter-env; builtin eval "$data"; define:exit-env
+            stack[-1]=$(( $? == 0 ))
+            stack_autopop[-1]=$temp_autopop
           }; ;;
         (switch)
           define:push-stack 0 switch;
@@ -360,7 +390,7 @@ define() {
           } else {
             define:error invalid action in context: $action
           };;
-        (elif) stack_autopop[-1]=$temp_autopop;
+        (elif) stack_autopop[-1]=$temp_autopop
                if (( stack[-1] )) {
                  define:enter-env; builtin eval "$data"; define:exit-env
                  stack[-1]=$?
@@ -462,7 +492,9 @@ define() {
             local -A corresponding_actions=(
               if endif
               for done
+              repeat done
               while done
+              until done
               switch done
               function end
             )

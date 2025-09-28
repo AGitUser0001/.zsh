@@ -34,7 +34,7 @@ echo $?
 #@if [[ $abc != alt ]]
 print abc is now $abc
 
-#while true
+#until true
 echo 0
 #break
 #continue
@@ -42,3 +42,8 @@ echo A
 #break
 #done
 echo B
+
+#@2 repeat 5
+echo abc
+echo def
+echo ghi
