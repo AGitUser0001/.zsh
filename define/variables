@@ -6,7 +6,7 @@
   chpwd_functions=( $chpwd_functions update_terminal_cwd )
   #@0 if [[ -t 1 ]]
     #exec update_terminal_cwd
-#fi
+#endif
 
 #@0 if [[ -e /usr/libexec/path_helper ]]
   #exec /usr/libexec/path_helper -s | source /dev/stdin

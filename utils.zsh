@@ -101,17 +101,30 @@ define() {
       }
     }
     define:pop-stack() {
-      local -A corresponding_type=(
-        for 1
-        while 1
-        function 2
-      )
-      if [[ $corresponding_type[$stack_type[-1]] == 1 && $stack[-1] == 0 ]] {
+      define:find-last-context-type
+      local ctype=$?
+      define:find-last-context
+      local cindex=$?
+      if [[ $1 == --meta && $cindex != $#stack ]] {
+        cindex=0
+        ctype=0
+      }
+      if (( ctype == 1 && stack[$cindex] == 0 )) {
+        while (( $#stack > cindex )) {
+          if { ! define:pop-stack --meta; } {
+            builtin return 0
+          }
+        }
         lineNo=$(( stack_line[-1] - 1 ))
         cont_loop=1
         builtin return 1
       }
-      if [[ $corresponding_type[$stack_type[-1]] == 2 && $stack[-1] == 0 ]] {
+      if (( ctype == 2 && stack[$cindex] == 0 )) {
+        while (( $#stack > cindex )) {
+          if { ! define:pop-stack --meta; } {
+            builtin return 0
+          }
+        }
         in_function=0
         if (( in_iife )) {
           builtin eval 'define:call "$in_function_name"' ${command##\#(@(<->[[:space:]]|)|)(+|)end([[:space:]]|)}
@@ -120,6 +133,31 @@ define() {
         builtin return 1
       }
       builtin shift -p stack stack_type stack_line stack_autopop
+    }
+    define:find-last-index() {
+      local max_last_index=0
+      while (( $#argv )) {
+        local last_index=$stack_type[(Ie)$1]
+        if (( last_index > max_last_index )) {
+          max_last_index=$last_index
+        }
+        shift
+      }
+      builtin return $max_last_index
+    }
+    define:find-last-context-type() {
+      local -A corresponding_type=(
+        for 1
+        while 1
+        function 2
+        switch 3
+      )
+      define:find-last-index for while function switch
+      builtin return $corresponding_type[$stack_type[$?]]
+    }
+    define:find-last-context() {
+      define:find-last-index for while function switch
+      builtin return $?
     }
     define:clean-stack() {
       if (( allow_clean_stack )) {
@@ -136,7 +174,7 @@ define() {
       define:exit-env --ignore-status
       
       while (( ${#tokens} > 0 )) {
-        local token_pos=${tokens[(i);]}
+        local token_pos=${tokens[(ie);]}
         if (( token_pos <= ${#tokens} )) {
           statements+=("${(j: :)tokens[1,$((token_pos-1))]}")
           tokens=("${(@)tokens[$((token_pos+1)),-1]}")
@@ -163,9 +201,6 @@ define() {
       define:enter-env --not-subcontext;
       "$name_of_self" $'\0function' "$1" "${(@)internal_args}"
       define:exit-env
-    }
-    call() {
-      define:call "$@"
     }
     define:return-status() {
       builtin return $1
@@ -235,6 +270,10 @@ define() {
       if (( in_function )) {
         continue
       }
+    }
+
+    if [[ $stack_type[-1] == switch && $command != \#(@(<->[[:space:]]|)|)(+|)(case|done)([[:space:]]*|) ]] {
+      continue
     }
 
     if [[ $command == '#+'* ]] {
@@ -327,16 +366,6 @@ define() {
                  stack[-1]=$?
                } else { stack[-1]=0 } ;;
         (else) stack[-1]=$(( !stack[-1] )); stack_autopop[-1]=$temp_autopop;;
-        (break)
-          define:clean-stack; if (( cont_loop )) { continue; }
-          if [[ $stack_type[-1] == case ]] {
-            define:pop-stack; if (( cont_loop )) { continue; } 
-            if [[ $stack_type[-1] == switch ]] {
-              stack[-1]=1
-            }
-          } else {
-            define:error invalid action in context: $action
-          };;
         (return)
           if (( 0${(j"")stack} == 0 )) {
             if (( function_mode )) {
@@ -387,26 +416,65 @@ define() {
             in_function_name=$trimmed_data
             define:push-stack 0 function
           };;
-        (end);&
+        (break);&
         (continue);&
+        (end);&
         (done);&
-        (fi)
+        (endif)
           define:clean-stack; if (( cont_loop )) { continue; }
-          local -A corresponding_actions=(
-            if fi
-            for done
-            while done
-            switch done
-            case continue
-            function end
-          )
-          if [[ $stack_type[-1] == case && $stack_type[-2] == switch && $action == done ]] {
-            define:pop-stack; if (( cont_loop )) { continue; }
-            define:pop-stack; if (( cont_loop )) { continue; }
-          } elif [[ $corresponding_actions[$stack_type[-1]] == $action ]] {
-            define:pop-stack; if (( cont_loop )) { continue; }
+          define:find-last-context-type
+          local ctype=$?
+          define:find-last-context
+          local cindex=$?
+          if [[ $action == continue ]] {
+            if (( ctype == 1 )) {
+              if (( stack[$cindex] == 0 )) {
+                while (( $#stack > cindex )) {
+                  if { ! define:pop-stack; } {
+                    break
+                  }
+                }
+                if (( $#stack == cindex )) {
+                  lineNo=$(( stack_line[-1] - 1 ))
+                  cont_loop=1
+                }
+                if (( cont_loop )) { continue; }
+              }
+            } elif (( ctype == 3 )) {
+              while (( $#stack > cindex )) {
+                if { ! define:pop-stack; } {
+                  break
+                }
+              }
+              if (( cont_loop )) { continue; }
+            } else {
+              define:error invalid action in context: $action
+            }
+          } elif [[ $action == break ]] {
+            if (( ctype == 1 || ctype == 3 )) {
+              if (( stack[$cindex] == 0 )) {
+                stack[$cindex]=1
+              }
+            } else {
+              define:error invalid action in context: $action
+            }
           } else {
-            define:error invalid action in context: $action
+            local -A corresponding_actions=(
+              if endif
+              for done
+              while done
+              switch done
+              function end
+            )
+            if [[ $stack_type[-1] == case && $stack_type[-2] == switch \
+                  && $action == $corresponding_actions[$stack_type[-2]] ]] {
+              define:pop-stack; if (( cont_loop )) { continue; }
+              define:pop-stack; if (( cont_loop )) { continue; }
+            } elif [[ $corresponding_actions[$stack_type[-1]] == $action ]] {
+              define:pop-stack; if (( cont_loop )) { continue; }
+            } else {
+              define:error invalid action in context: $action
+            }
           };;
         (exec) if (( 0${(j"")stack} == 0 )) {
           define:enter-env --not-subcontext; builtin eval "$data"; define:exit-env

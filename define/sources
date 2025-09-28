@@ -15,4 +15,4 @@ $ZDOTDIR/pyutils.zsh
   #@if [[ -e $HOMEBREW_PREFIX/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh ]]
     $HOMEBREW_PREFIX/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
     #+exec ZSH_HIGHLIGHT_HIGHLIGHTERS+=( brackets )
-#fi
+#endif

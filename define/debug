@@ -1,4 +1,19 @@
 # Debug File
+var='a/a\b'
+#switch ${var:a}
+  #case */*
+  ls ${var:a}
+  #if [[ $var == *\\* ]]
+  #continue
+  #endif
+  #continue
+  #case *.*
+  #case */*.*
+  cat ${var:a}
+  #break
+  #case *
+  echo ${var:a}
+#done
 #function
 echo a
 ls
@@ -6,7 +21,7 @@ ls
 abc=alt
 print abc is now $abc
 #return 5
-#fi
+#endif
 abc=def
 print abc is now $abc
 #@2 if (( RANDOM > 20000 ))
@@ -16,6 +31,14 @@ define:return-status 5
 #end
 
 echo $?
-#@2 if [[ $abc != alt ]]
+#@if [[ $abc != alt ]]
 print abc is now $abc
-#goto 2
+
+#while true
+echo 0
+#break
+#continue
+echo A
+#break
+#done
+echo B

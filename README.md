@@ -49,15 +49,68 @@ Unless the line is a comment (starts with a hash), in which case it will depend 
 #if <eval>
 #elif <eval>
 #else
-#fi
+#endif
 
 #exec <eval>
+
+#for local i=0; i < 5; i++
+echo repeats 5 times $i = 0, 1, 2, 3, 4
+#break <-- this stops a loop
+#continue <-- this goes to the next iteration
+#done
+
+#while true
+echo infinite loop
+#continue <-- skip
+#break <-- stop
+echo a
+#dobe
+
+#switch ${var:a}
+  #case */*
+  ls ${var:a}
+  #if [[ $var == *\\* ]]
+  #break
+  #endif
+  #continue
+  #case *.*
+  #case */*.*
+  cat ${var:a}
+  #break
+  #case *
+  echo ${var:a}
+#done
+
+#function hello
+echo world
+#end
+
+#call hello
+
+#label a
+echo infinite loop
+#goto a
+echo will not print
 ```
 The if and elif control whether the following code will be run depending on the status code.
 The else inverts the stored status code in the if stack.
-The fi pops the status code stack.
-\<eval\> is a placeholder for code to be evaluated.
+The endif pops the status code stack.
+`#exec` runs a command.
 
+For loops takes a `initializer; condition; incrementer`, and end with `#done`.
+All three are optional, but there must be two semicolons, and the semicolons must be separated.
+While loops take a `condition`, will run until the condition fails, and end with `#done`.
+
+The switch takes a string that will be expanded, the case takes a shell pattern, done exits switch.
+Continue in switch cases will continue searching the cases, break in switch cases will exit the switch.
+
+Functions take a name parameter and end with `#end`. If the function has no name, it is an iife and will be immediately invoked, in which case you can use `#end [args]`. Named functions can be called with `#call <name> [args]`. A function works by running a nested define.
+
+Labels take a name, which can have spaces but cannot be a positive integer.
+`#goto <name>` goes to a named label.
+`#goto <lineNo>` goes to a line.
+Note that everything executes in order, so you cannot goto a label or call a function before it is defined.
+You can also call functions by running `define:call <name> [args]`.
 ```zsh
 #@1 if false
   echo will-not-print
@@ -83,6 +136,7 @@ echo will-print
 ```
 The @n applies the status for the next N lines. @ is a shorthand for @1.
 When nested, the parent status line remaining count will decrement, but only pop once the child status pops.
+You can apply @ to: if, elif, else, for, while, switch, function.
 
 ## Functions
 Functions are under the ./functions folder.
