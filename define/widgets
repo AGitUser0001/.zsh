@@ -1,7 +1,7 @@
-#args -N
+#prepend -N
 bracketed-paste bracketed-paste-url-magic
 self-insert url-quote-magic
 edit-command-line
 
-#args -A
+#prepend -A
 emacs-forward-word forward-word

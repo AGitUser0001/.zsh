@@ -39,6 +39,8 @@ define() {
   if [[ $1 == $'\0'* ]] {
     nested_define=1
     builtin shift
+  } elif (( funcstack[(Ie)$name_of_self] )) {
+    nested_define=1
   }
   case $# {
     (0) builtin print -u2 "Usage: $name_of_self <file> [<command>]"; builtin return 1;;
@@ -337,10 +339,6 @@ define() {
       }
     }
 
-    if [[ $stack_type[-1] == switch && $command != \#(@(<->[[:space:]]|)|)(+|)(case|done)([[:space:]]*|) ]] {
-      continue
-    }
-
     if [[ $command == '#+'* ]] {
       command="#${command#\#+}"
       allow_clean_stack=0
@@ -376,7 +374,7 @@ define() {
       local trimmed_data="${${data##[[:space:]]#}%%[[:space:]]#}"
       case $action {
         ('');;
-        (args) prepend_args="$data";;
+        (prepend) prepend_args="$data";;
         (if) define:enter-env; builtin eval "$data"; define:exit-env; define:push-stack $? if;;
         (for)
           define:get-statements;
@@ -434,14 +432,13 @@ define() {
           define:exit-env --ignore-status;;
         (case)
           define:clean-stack; if (( cont_loop )) { continue; }
-          if [[ $stack_type[-1] == case && $frame_data[$stack_line[-1]] == continue ]] {
+          if [[ $stack_type[-1] == case && $stack[-1] != 0 ]] {
             define:pop-stack; if (( cont_loop )) { continue; } 
           }
           if [[ $stack_type[-1] == case ]] {
             local prev_case_status=$stack[-1]
             define:pop-stack; if (( cont_loop )) { continue; } 
             define:push-stack $prev_case_status case;
-            frame_data[$stack_line[-1]]=fallthrough
           } elif [[ $stack_type[-1] == switch ]] {
             if [[ $stack[-1] == 0 ]] {
               local switch_data=$frame_data[$stack_line[-1]]
@@ -452,7 +449,53 @@ define() {
             } else {
               define:push-stack 1 case;
             }
-            frame_data[$stack_line[-1]]=fallthrough
+          } else {
+            define:error invalid action in context: $action
+          };;
+        (case-regex)
+          define:clean-stack; if (( cont_loop )) { continue; }
+          if [[ $stack_type[-1] == case && $stack[-1] != 0  ]] {
+            define:pop-stack; if (( cont_loop )) { continue; } 
+          }
+          if [[ $stack_type[-1] == case ]] {
+            local prev_case_status=$stack[-1]
+            define:pop-stack; if (( cont_loop )) { continue; } 
+            define:push-stack $prev_case_status case;
+          } elif [[ $stack_type[-1] == switch ]] {
+            if [[ $stack[-1] == 0 ]] {
+              local switch_data=$frame_data[$stack_line[-1]]
+              local regexp_flags=
+              if [[ $trimmed_data == /*/* ]] {
+                regexp_flags=${trimmed_data[ ${trimmed_data[(Ie)/]} + 1, -1 ]}
+                trimmed_data=${trimmed_data[ 2, ${trimmed_data[(Ie)/]} - 1 ]}
+              }
+              local options_casematch=$options[casematch]
+              if [[ $regexp_flags == [imsxUXJ]# ]] {
+                if [[ $options[rematchpcre] == on ]] {
+                  if (( $#regexp_flags )) {
+                    trimmed_data="(?$regexp_flags)$trimmed_data"
+                  }
+                } else {
+                  if [[ $regexp_flags == i## ]] {
+                    options[casematch]=off;
+                  } else {
+                    if (( $#regexp_flags )) {
+                      define:error invalid regexp flags: $regexp_flags
+                    }
+                    options[casematch]=on;
+                  }
+                }
+              } else {
+                define:error invalid regexp flags: $regexp_flags
+              }
+              define:enter-env
+              [[ "$switch_data" =~ ${~trimmed_data} ]]
+              define:exit-env --ignore-status
+              define:push-stack $? case;
+              options[casematch]=$options_casematch
+            } else {
+              define:push-stack 1 case;
+            }
           } else {
             define:error invalid action in context: $action
           };;
@@ -576,7 +619,6 @@ define() {
               }
             } elif (( ctype == 3 )) {
               if (( $#stack > cindex )) {
-                frame_data[$stack_line[$((cindex + 1))]]=continue
                 stack[$((cindex + 1))]=1
               } else {
                 stack[$cindex]=1

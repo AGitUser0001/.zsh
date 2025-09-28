@@ -44,7 +44,7 @@ Unless the line is a comment (starts with a hash), in which case it will depend 
 
 ```zsh
 # comment
-#args <...args>
+#prepend <...args>
 
 #if <eval>
 #elif <eval>
@@ -84,6 +84,12 @@ echo repeats 5 times
   #break
   #endif
   #continue
+  #case-regexp /.*abc.*/i
+  echo regexp cases
+  #break
+  #case-regexp abc
+  echo can be written without /pattern/flags as well
+  #break
   #case *.*
   #case */*.*
   cat ${var:a}
@@ -111,6 +117,7 @@ echo infinite loop
 #goto a
 echo will not print
 ```
+`#prepend <...args>` sets these arguments to be prepended before the command
 The if and elif control whether the following code will be run depending on the status code.
 The else inverts the stored status code in the if stack.
 The endif pops the status code stack.
@@ -123,6 +130,8 @@ While loops take a `condition`, will run until the condition fails, and end with
 Until is the same as while, except the condition is negated.
 
 The switch takes a string that will be expanded, the case takes a shell pattern, done exits switch.
+`#case-regexp <pattern>` uses regexp matching, patterns can be either `<pattern>` or `/<pattern>/flags`.
+A regexp pattern in the form of /pattern/flags can have either the `i` flag, or the `imsxUXJ` flags, depending on whether you have the REMATCH_PCRE option set.
 Continue in switch cases will continue searching the cases, break in switch cases will exit the switch.
 
 Functions take a name parameter and end with `#end`. If the function has no name, it is an iife and will be immediately invoked, in which case you can use `#end [args]`. Named functions can be called with `#call <name> [args]`. A function works by running a nested define. You can return values using `#return <value>`. `#call-and-return <name> [args]` calls a function and returns its result while in a function. Return will set $? outside of a function. Call-and-return will call a function normally when called outside of a function. `#call-and-end <name> [args]` will call a function and end the current function (return 0) when called from a function. Outside of a function, `#call-and-end` is invalid.

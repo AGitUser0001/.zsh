@@ -10,6 +10,9 @@ echo $1
 
 var='a/a\b.c'
 #switch ${var:a}
+  #case-regex /.*A/a\\b\.C$/i
+  echo a wins
+  #break
   #case */*
   ls ${var:a}
   #if [[ $var == *\\* ]]

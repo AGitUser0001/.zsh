@@ -10,9 +10,9 @@ zsh/zselect
 #@if [[ ! $COLORTERM = *(24bit|truecolor)* ]]
 zsh/nearcolor
 
-#args -F
+#prepend -F
 zsh/stat b:zstat
-#args --
+#prepend
 
 zsh/attr
 zsh/curses

@@ -31,7 +31,7 @@ ${key[PageDown]:-'^[[6~'}               history-incremental-search-forward
 # menu completion
 '^I'              menu-complete       '^[[Z'        reverse-menu-complete
 
-#args -M menuselect
+#prepend -M menuselect
 ${key[Backspace]:-'^?'}  send-break
 '^['                     send-break
 '^[[1;2C'                history-incremental-search-forward
