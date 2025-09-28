@@ -39,7 +39,7 @@ define() {
   if [[ $1 == $'\0'* ]] {
     nested_define=1
     builtin shift
-  } elif (( funcstack[(Ie)$name_of_self] )) {
+  } elif (( funcstack[(Ie)$name_of_self] > 1 )) {
     nested_define=1
   }
   case $# {
