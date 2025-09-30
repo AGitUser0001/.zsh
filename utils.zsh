@@ -29,7 +29,8 @@ erase() {
 
 define() {
   builtin enable emulate print return shift read unset eval
-  local nested_define=0 function_mode=0 function_begin=0 tail_call=0 function_name= name_of_self=$funcstack[1]
+  local nested_define=0 function_mode=0 function_begin=0 function_name= name_of_self=$funcstack[1]
+  local tail_call=0 tail_call_result=
   local -a function_args=( )
   if [[ $1 == $'\0function' ]] {
     function_mode=1 function_begin=1
@@ -47,10 +48,11 @@ define() {
     (1) 2=$name_of_self;;
   }
   local prepend_args env_status=0 in_env=1 define_exit_status=0 line lineNo iter_var=0
-  local -T STACK stack
-  local -T STACK_TYPE stack_type
-  local -T STACK_LINE stack_line
-  local -T STACK_AUTOPOP stack_autopop
+  local define_exit_result=0 define_use_exit_result=0
+  local -T STACK stack=( )
+  local -T STACK_TYPE stack_type=( )
+  local -T STACK_LINE stack_line=( )
+  local -T STACK_AUTOPOP stack_autopop=( )
   local -a prepend_command env_subcontext normal_options=( extended_glob on errexit off ) env_options
   local -A frame_data
   local in_function=0 in_iife=0 in_function_name=
@@ -111,8 +113,9 @@ define() {
       define:find-last-context
       local cindex=$?
       if [[ $1 == --meta && $cindex != $#stack ]] {
-        cindex=0
-        ctype=0
+        cindex=0 ctype=0
+      } elif [[ $1 == --force ]] {
+        cindex=0 ctype=0
       }
       if (( ctype == 1 && stack[$cindex] == 0 )) {
         while (( $#stack > cindex )) {
@@ -123,6 +126,8 @@ define() {
         if (( stack_line[-1] != lineNo )) {
           lineNo=$(( stack_line[-1] - 1 ))
           cont_loop=1
+        } else {
+          #define:pop-stack --force
         }
         builtin return 1
       }
@@ -132,6 +137,7 @@ define() {
             builtin return 1
           }
         }
+        define:pop-stack --force
         functions_end[$in_function_name]=$lineNo
         in_function=0
         if (( in_iife )) {
@@ -209,11 +215,14 @@ define() {
           start_lineNo=$functions_start[$call_target]
           end_lineNo=$functions_end[$call_target]
           builtin shift
-          STACK= STACK_TYPE= STACK_LINE= STACK_AUTOPOP= frame_data=( )
-          in_function=0 in_iife=0 in_function_name= define_exit_status=0
+          stack=( ) stack_type=( ) stack_line=( ) stack_autopop=( ) frame_data=( )
+          if [[ -n $tail_call_result && $define_use_exit_result == 0 ]] {
+            define_exit_result=$tail_call_result define_use_exit_result=1
+          }
+          in_function=0 in_iife=0 in_function_name= define_exit_status=0 tail_call_result=
           lineNo=$start_lineNo
           for (( iter_var = start_lineNo + 1; iter_var < end_lineNo; iter_var++ )) {
-            unset "ast_type[$iter_var]" "ast_line[$iter_var]" "ast_autopop[$iter_var]"
+            unset "ast_stack[$iter_var]" "ast_type[$iter_var]" "ast_line[$iter_var]" "ast_autopop[$iter_var]"
           }
           function_begin=1
           function_name=$call_target
@@ -251,15 +260,33 @@ define() {
       if (( !$+ast_stack[$1] )) {
         ast_stack[$1]=${STACK//[^:]##/0}
         ast_type[$1]=$STACK_TYPE
-        ast_line[$1]=$STACK_LINE
+        ast_line[$1]=
+        for iter_var ( "${(@)stack_line}" ) {
+          local ctx_comma="${line_contexts[$iter_var]},"
+          ast_line[$1]+="${${(@k)remap_lines[(R)$iter_var]}[(R)$ctx_comma*]}:"
+        }
+        ast_line[$1]="${ast_line[$1]%:}"
         ast_autopop[$1]=$STACK_AUTOPOP
       }
     }
     define:ast-restore() {
-      STACK=$ast_stack[$1]
-      STACK_TYPE=$ast_type[$1]
-      STACK_LINE=$ast_line[$1]
-      STACK_AUTOPOP=$ast_autopop[$1]
+      if [[ -n $ast_stack[$1] ]] {
+        STACK=$ast_stack[$1]
+      }
+      if [[ -n $ast_type[$1] ]] {
+        STACK_TYPE=$ast_type[$1]
+      }
+      if [[ -z $ast_line[$1] ]] {
+        stack_line=( )
+      } else {
+        STACK_LINE=$ast_line[$1]
+        for (( iter_var = 1; iter_var <= $#stack_line; iter_var++ )) {
+          stack_line[$iter_var]=$remap_lines[$stack_line[$iter_var]]
+        }
+      }
+      if [[ -n $ast_autopop[$1] ]] {
+        STACK_AUTOPOP=$ast_autopop[$1]
+      }
       (( $+ast_stack[$1] ))
     }
   }
@@ -268,21 +295,25 @@ define() {
 
   local context_name=${function_name:-$1}
   if (( !function_mode )) {
-    local -a lines
+    local -a lines line_contexts
+    local -A functions_start functions_end labels remap_lines
+    local -A ast_stack ast_type ast_line ast_autopop
+    local last_context_id=0
     while { builtin read -r line || [[ $line ]] } {
       lines+=$line
+      line_contexts+="$last_context_id"
+      remap_lines[$last_context_id,$#lines]=$#lines
     } < $1
-    local -A functions_start functions_end labels
-    local -A ast_stack ast_type ast_line ast_autopop
     lineNo=1
   } else {
     local -A functions_start=( "${(@kv)functions_start}" ) functions_end=( "${(@kv)functions_end}" )
-    local -A labels=( "${(@kv)labels}" )
+    local -A labels=( "${(@kv)labels}" ) remap_lines=( "${(@kv)remap_lines}" )
+    local -a lines=( "${(@)lines}" ) line_contexts=( "${(@)line_contexts}" )
     local -A ast_stack=( "${(@kv)ast_stack}" ) ast_type=( "${(@kv)ast_type}" )
     local -A ast_line=( "${(@kv)ast_line}" )   ast_autopop=( "${(@kv)ast_autopop}" )
     lineNo=$(( start_lineNo + 1 ))
     for (( iter_var = start_lineNo + 1; iter_var < end_lineNo; iter_var++ )) {
-      unset "ast_type[$iter_var]" "ast_line[$iter_var]" "ast_autopop[$iter_var]"
+      unset "ast_stack[$iter_var]" "ast_type[$iter_var]" "ast_line[$iter_var]" "ast_autopop[$iter_var]"
     }
   }
   builtin unset line
@@ -308,10 +339,11 @@ define() {
       command="# EOF: ${(q)context_name}"
     } elif (( lineNo < 1 )) {
       command="# BOF: ${(q)context_name}"
+    } else {
+      define:ast-snapshot $lineNo
     }
-    define:ast-snapshot $lineNo
     if (( ZSH_DEBUG )) {
-      builtin print $context_name$'\t'$lineNo$'\t'"${${:-0${(j"")stack}}:---}"\
+      builtin print $context_name$'\t'$lineNo$'\t'"${${:-${(j"")stack}}:---}"\
       $'\t'${stack_line[-1]:---}$'\t'${stack_type[-1]:---}$'\t'${stack_autopop[-1]:---}$'\t'${(@q)command}
     }
 
@@ -499,6 +531,69 @@ define() {
           } else {
             define:error invalid action in context: $action
           };;
+        (include)
+          local include_file=${(e)trimmed_data}
+          if [[ ! -r $include_file ]] { 
+            define:error include file not found: "${(q)include_file}"
+          } else {
+            define:enter-env --not-subcontext
+            local line include_lines=( ) include_line_contexts=( ) include_start=$lineNo
+            (( last_context_id++ ))
+            while { builtin read -r line || [[ $line ]] } {
+              include_lines+=$line
+              include_line_contexts+=$last_context_id
+            } < $include_file
+            if (( !$#include_lines )) {
+              include_lines+=""
+              include_line_contexts+=$last_context_id
+            }
+            local include_end=$(( lineNo - 1 + $#include_lines ))
+            local include_length=$(( include_end - lineNo ))
+            unset line
+            lines=( "${(@)lines[1,$((lineNo-1))]}" "${(@)include_lines}" "${(@)lines[$((lineNo+1)),-1]}" )
+            line_contexts=( "${(@)line_contexts[1,$((lineNo-1))]}" "${(@)include_line_contexts}" "${(@)line_contexts[$((lineNo+1)),-1]}" )
+            local remap_val=
+            for iter_var remap_val ("${(@kv)remap_lines}") {
+              if (( remap_val > include_start )) {
+                remap_lines[$iter_var]=$(( remap_val + include_length ))
+              }
+            }
+            for  (( iter_var = include_start; iter_var <= include_end; iter_var++ )) {
+              remap_lines[$last_context_id,$iter_var]=$iter_var
+            }
+            typeset remap_lines
+            for iter_var remap_val ("${(@kv)stack_line}") {
+              if (( remap_val > include_start )) {
+                stack_line[$iter_var]=$(( remap_val + include_length ))
+              }
+            }
+            for iter_var remap_val ("${(@kv)functions_start}") {
+              if (( remap_val > include_start )) {
+                functions_start[$iter_var]=$(( remap_val + include_length ))
+              }
+            }
+            for iter_var remap_val ("${(@kv)functions_end}") {
+              if (( remap_val > include_start )) {
+                functions_end[$iter_var]=$(( remap_val + include_length ))
+              }
+            }
+            for iter_var remap_val ("${(@kv)labels}") {
+              if (( remap_val > include_start )) {
+                labels[$iter_var]=$(( remap_val + include_length ))
+              }
+            }
+            for (( iter_var=$#ast_stack; iter_var > include_start; iter_var-- )) {
+              if (( !$+ast_stack[$1] )) { continue; }
+              (( remap_val = iter_var + include_length ))
+              ast_stack[$remap_val]=$ast_stack[$iter_var]
+              ast_type[$remap_val]=$ast_type[$iter_var]
+              ast_line[$remap_val]=$ast_line[$iter_var]
+              ast_autopop[$remap_val]=$ast_autopop[$iter_var]
+              unset "ast_stack[$iter_var]" "ast_type[$iter_var]" "ast_line[$iter_var]" "ast_autopop[$iter_var]"
+            }
+            unset remap_val
+            ((lineNo--)); continue
+          };;
         (elif) stack_autopop[-1]=$temp_autopop
                if (( stack[-1] )) {
                  define:enter-env; builtin eval "$data"; define:exit-env
@@ -508,7 +603,9 @@ define() {
         (return)
           if (( 0${(j"")stack} == 0 )) {
             if (( function_mode )) {
-              define_exit_status=$data
+              if [[ -z $trimmed_data ]] {
+                define_exit_status=$data
+              }
               break
             } else {
               define:enter-env --not-subcontext
@@ -548,13 +645,21 @@ define() {
               if [[ -z $call_target ]] {
                 define:error invalid function name: "${(q)trimmed_data}"
               } else {
-                tail_call=1
+                tail_call=1 tail_call_result=$define_exit_status
                 builtin eval 'define:call "$call_target"' ${data##[[:space:]]#$call_target}
                 if (( cont_loop )) { continue; }
               }
               if (( function_mode )) {
                 break
               }
+            }
+          } else {
+            define:error invalid action in context: $action
+          }; ;;
+        (set-return)
+          if (( function_mode )) {
+            if (( 0${(j"")stack} == 0 )) {
+              define_exit_status=$data
             }
           } else {
             define:error invalid action in context: $action
@@ -566,13 +671,25 @@ define() {
                 };;
         (goto) if (( 0${(j"")stack} == 0 )) {
                  if [[ $trimmed_data == <-> ]] {
-                   lineNo=$(( trimmed_data - 1 ))
-                   define:ast-restore $lineNo
+                   local goto_lineNo=$trimmed_data
+                   goto_lineNo=$remap_lines[$line_contexts[$lineNo],$goto_lineNo]
+                   if (( !goto_lineNo )) {
+                     define:error out of bounds: "${(q)trimmed_data}"
+                   } else {
+                     lineNo=$(( goto_lineNo - 1 ))
+                     define:ast-restore $lineNo
+                   }
                    continue
                  } else {
                    if [[ -n $labels[$trimmed_data] ]] {
-                     lineNo=$(( labels[$trimmed_data] - 1 ))
-                     define:ast-restore $lineNo
+                     local goto_lineNo=$labels[$trimmed_data]
+                     goto_lineNo=$remap_lines[$line_contexts[$lineNo],$goto_lineNo]
+                     if (( !goto_lineNo )) {
+                       define:error out of bounds: "${(q)trimmed_data}"
+                     } else {
+                       lineNo=$(( goto_lineNo - 1 ))
+                       define:ast-restore $lineNo
+                     }
                      continue
                    } else {
                      define:error invalid label: "${(q)trimmed_data}"
@@ -681,6 +798,9 @@ define() {
   define:enter-env --not-subcontext --passthrough-status
   if (( !nested_define )) {
     builtin unset -fm 'define:*' || true
+  }
+  if (( define_use_exit_result )) {
+    builtin return $define_exit_result
   }
   builtin return $define_exit_status
 }

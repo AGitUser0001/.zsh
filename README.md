@@ -104,6 +104,7 @@ echo $1 world
 #call-and-return hello $(( $1 - 2 ))
 #elif (( $1 == 0 ))
 echo $1 hello
+#set-return 50
 #call-and-end hello $(( $1 - 5 ))
 #else
 #return 5
@@ -111,6 +112,8 @@ echo $1 hello
 #end
 
 #call hello
+
+#include ./test.zsh
 
 #label a
 echo infinite loop
@@ -134,11 +137,15 @@ The switch takes a string that will be expanded, the case takes a shell pattern,
 A regexp pattern in the form of /pattern/flags can have either the `i` flag, or the `imsxUXJ` flags, depending on whether you have the REMATCH_PCRE option set.
 Continue in switch cases will continue searching the cases, break in switch cases will exit the switch.
 
-Functions take a name parameter and end with `#end`. If the function has no name, it is an iife and will be immediately invoked, in which case you can use `#end [args]`. Named functions can be called with `#call <name> [args]`. A function works by running a nested define. You can return values using `#return <value>`. `#call-and-return <name> [args]` calls a function and returns its result while in a function. Return will set $? outside of a function. Call-and-return will call a function normally when called outside of a function. `#call-and-end <name> [args]` will call a function and end the current function (return 0) when called from a function. Outside of a function, `#call-and-end` is invalid.
+Functions take a name parameter and end with `#end`. If the function has no name, it is an iife and will be immediately invoked, in which case you can use `#end [args]`. Named functions can be called with `#call <name> [args]`. A function works by running a nested define. You can return values using `#return <value>`. `#call-and-return <name> [args]` calls a function and returns its result while in a function. `#return` without a value will use the currently set return status. Return will set $? outside of a function. Call-and-return will call a function normally when called outside of a function. `#call-and-end <name> [args]` will call a function and end the current function (return currently set return value, default 0) when called from a function. Outside of a function, `#call-and-end` is invalid.
+`#set-return <status>` sets the return status.
 
 Labels take a name, which can have spaces but cannot be a positive integer.
 `#goto <name>` goes to a named label.
 `#goto <lineNo>` goes to a line.
+
+`#include <file>` injects a file's code into the file. `#goto` line numbers stay the same, they are internally remapped using a context id.
+
 Note that everything executes in order, so you cannot goto a label or call a function before it is defined.
 You can also call functions by running `define:call <name> [args]`.
 ```zsh
