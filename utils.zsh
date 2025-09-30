@@ -532,68 +532,70 @@ define() {
             define:error invalid action in context: $action
           };;
         (include)
-          local include_file=${(e)trimmed_data}
-          if [[ ! -r $include_file ]] { 
-            define:error include file not found: "${(q)include_file}"
-          } else {
-            define:enter-env --not-subcontext
-            local line include_lines=( ) include_line_contexts=( ) include_start=$lineNo
-            (( last_context_id++ ))
-            while { builtin read -r line || [[ $line ]] } {
-              include_lines+=$line
-              include_line_contexts+=$last_context_id
-            } < $include_file
-            if (( !$#include_lines )) {
-              include_lines+=""
-              include_line_contexts+=$last_context_id
-            }
-            local include_end=$(( lineNo - 1 + $#include_lines ))
-            local include_length=$(( include_end - lineNo ))
-            unset line
-            lines=( "${(@)lines[1,$((lineNo-1))]}" "${(@)include_lines}" "${(@)lines[$((lineNo+1)),-1]}" )
-            line_contexts=( "${(@)line_contexts[1,$((lineNo-1))]}" "${(@)include_line_contexts}" "${(@)line_contexts[$((lineNo+1)),-1]}" )
-            local remap_val=
-            for iter_var remap_val ("${(@kv)remap_lines}") {
-              if (( remap_val > include_start )) {
-                remap_lines[$iter_var]=$(( remap_val + include_length ))
+          if (( 0${(j"")stack} == 0 )) {
+            local include_file=${(e)trimmed_data}
+            if [[ ! -r $include_file ]] { 
+              define:error include file not found: "${(q)include_file}"
+            } else {
+              define:enter-env --not-subcontext
+              local line include_lines=( ) include_line_contexts=( ) include_start=$lineNo
+              (( last_context_id++ ))
+              while { builtin read -r line || [[ $line ]] } {
+                include_lines+=$line
+                include_line_contexts+=$last_context_id
+              } < $include_file
+              if (( !$#include_lines )) {
+                include_lines+=""
+                include_line_contexts+=$last_context_id
               }
-            }
-            for  (( iter_var = include_start; iter_var <= include_end; iter_var++ )) {
-              remap_lines[$last_context_id,$iter_var]=$iter_var
-            }
-            typeset remap_lines
-            for iter_var remap_val ("${(@kv)stack_line}") {
-              if (( remap_val > include_start )) {
-                stack_line[$iter_var]=$(( remap_val + include_length ))
+              local include_end=$(( lineNo - 1 + $#include_lines ))
+              local include_length=$(( include_end - lineNo ))
+              unset line
+              lines=( "${(@)lines[1,$((lineNo-1))]}" "${(@)include_lines}" "${(@)lines[$((lineNo+1)),-1]}" )
+              line_contexts=( "${(@)line_contexts[1,$((lineNo-1))]}" "${(@)include_line_contexts}" "${(@)line_contexts[$((lineNo+1)),-1]}" )
+              local remap_val=
+              for iter_var remap_val ("${(@kv)remap_lines}") {
+                if (( remap_val > include_start )) {
+                  remap_lines[$iter_var]=$(( remap_val + include_length ))
+                }
               }
-            }
-            for iter_var remap_val ("${(@kv)functions_start}") {
-              if (( remap_val > include_start )) {
-                functions_start[$iter_var]=$(( remap_val + include_length ))
+              for  (( iter_var = include_start; iter_var <= include_end; iter_var++ )) {
+                remap_lines[$last_context_id,$iter_var]=$iter_var
               }
-            }
-            for iter_var remap_val ("${(@kv)functions_end}") {
-              if (( remap_val > include_start )) {
-                functions_end[$iter_var]=$(( remap_val + include_length ))
+              typeset remap_lines
+              for iter_var remap_val ("${(@kv)stack_line}") {
+                if (( remap_val > include_start )) {
+                  stack_line[$iter_var]=$(( remap_val + include_length ))
+                }
               }
-            }
-            for iter_var remap_val ("${(@kv)labels}") {
-              if (( remap_val > include_start )) {
-                labels[$iter_var]=$(( remap_val + include_length ))
+              for iter_var remap_val ("${(@kv)functions_start}") {
+                if (( remap_val > include_start )) {
+                  functions_start[$iter_var]=$(( remap_val + include_length ))
+                }
               }
+              for iter_var remap_val ("${(@kv)functions_end}") {
+                if (( remap_val > include_start )) {
+                  functions_end[$iter_var]=$(( remap_val + include_length ))
+                }
+              }
+              for iter_var remap_val ("${(@kv)labels}") {
+                if (( remap_val > include_start )) {
+                  labels[$iter_var]=$(( remap_val + include_length ))
+                }
+              }
+              for (( iter_var=$#ast_stack; iter_var > include_start; iter_var-- )) {
+                if (( !$+ast_stack[$1] )) { continue; }
+                (( remap_val = iter_var + include_length ))
+                ast_stack[$remap_val]=$ast_stack[$iter_var]
+                ast_type[$remap_val]=$ast_type[$iter_var]
+                ast_line[$remap_val]=$ast_line[$iter_var]
+                ast_autopop[$remap_val]=$ast_autopop[$iter_var]
+                unset "ast_stack[$iter_var]" "ast_type[$iter_var]" "ast_line[$iter_var]" "ast_autopop[$iter_var]"
+              }
+              unset remap_val
+              ((lineNo--)); continue
             }
-            for (( iter_var=$#ast_stack; iter_var > include_start; iter_var-- )) {
-              if (( !$+ast_stack[$1] )) { continue; }
-              (( remap_val = iter_var + include_length ))
-              ast_stack[$remap_val]=$ast_stack[$iter_var]
-              ast_type[$remap_val]=$ast_type[$iter_var]
-              ast_line[$remap_val]=$ast_line[$iter_var]
-              ast_autopop[$remap_val]=$ast_autopop[$iter_var]
-              unset "ast_stack[$iter_var]" "ast_type[$iter_var]" "ast_line[$iter_var]" "ast_autopop[$iter_var]"
-            }
-            unset remap_val
-            ((lineNo--)); continue
-          };;
+          }; ;;
         (elif) stack_autopop[-1]=$temp_autopop
                if (( stack[-1] )) {
                  define:enter-env; builtin eval "$data"; define:exit-env
