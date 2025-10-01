@@ -114,6 +114,7 @@ echo $1 hello
 #call hello
 
 #include ./test.zsh
+#inject ls; $code
 
 #label a
 echo infinite loop
@@ -145,6 +146,7 @@ Labels take a name, which can have spaces but cannot be a positive integer.
 `#goto <lineNo>` goes to a line.
 
 `#include <file>` injects a file's code into the file. `#goto` line numbers stay the same, they are internally remapped using a context id.
+`#inject "exp"` injects an expanded version of exp (same as double quotes) as line(s). Uses the same logic as `#include`.
 
 Note that everything executes in order, so you cannot goto a label or call a function before it is defined.
 You can also call functions by running `define:call <name> [args]`.
