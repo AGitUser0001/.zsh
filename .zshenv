@@ -12,6 +12,8 @@ builtin eval "${SETUP#*;}";
 export PATH FPATH CDPATH MODULE_PATH
 export CPPFLAGS='-I'$HOMEBREW_PREFIX'/opt/openjdk/include'
 export JAVA_HOME=$HOMEBREW_PREFIX'/opt/openjdk/libexec/openjdk.jdk/Contents/Home'
+export LDFLAGS="-L/opt/homebrew/opt/llvm/lib"
+export CPPFLAGS="-I/opt/homebrew/opt/llvm/include"
 
 PS4='%F{red}+%e %N:%i %D{.%6.}> %f'
 if (( ZSH_DEBUG )) zmodload zsh/zprof
