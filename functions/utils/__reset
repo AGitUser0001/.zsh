@@ -6,3 +6,4 @@ builtin printf '%s\e]0;%s\a\e]1;%s\a'     \
   "${TITLE//$'\a'/}" "${TABTITLE//$'\a'/}"
 local reply=(cnorm sgr0 smam sc rmcup)
 builtin source $ZDOTDIR/terminfo.zsh
+builtin printf '\e[<999u\e[=0u'
