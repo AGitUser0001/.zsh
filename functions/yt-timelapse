@@ -1,0 +1,162 @@
+builtin emulate -LR zsh
+builtin zmodload zsh/zutil zsh/datetime zsh/zselect
+builtin enable zparseopts strftime zselect
+
+builtin setopt pipefail
+
+local -a opt_multi opt_help
+
+builtin zparseopts -D -E -F -- \
+    m=opt_multi \
+    -multi=opt_multi \
+    h=opt_help \
+    -help=opt_help ||
+    return 2
+
+if (( ${#opt_help} )); then
+    builtin print -r -- \
+        'usage: yt-timelapse [-m|--multi] <url> [output.ts]' \
+        '' \
+        '       yt-timelapse <url>' \
+        '       yt-timelapse <url> output.ts' \
+        '       yt-timelapse --multi <url>'
+    return
+fi
+
+integer multi=${#opt_multi}
+
+local url=''
+local output=''
+local current_output=''
+local timestamp=''
+local probe=''
+
+integer part=0
+integer status=0
+
+if (( multi )); then
+    if (( $# != 1 )); then
+        builtin print -u2 -r -- \
+            'yt-timelapse: --multi takes exactly one URL; output filenames are automatic'
+        return 2
+    fi
+
+    url=$1
+else
+    if (( $# < 1 || $# > 2 )); then
+        builtin print -u2 -r -- \
+            'usage: yt-timelapse [-m|--multi] <url> [output.ts]'
+        return 2
+    fi
+
+    url=$1
+    output=${2-}
+fi
+
+while (( 1 )); do
+    #
+    # Multi mode is specifically for following a live broadcast across
+    # Streamlink/YouTube connection expirations.
+    #
+    # Before starting each new chunk, verify that Streamlink's YouTube
+    # plugin still considers the video live. This prevents an ended
+    # broadcast from reopening as an archived replay and getting
+    # timelapsed from the beginning over and over.
+    #
+    if (( multi )); then
+        probe="$(
+            builtin command streamlink \
+                --loglevel debug \
+                --json \
+                "$url" \
+                2>&1 >/dev/null
+        )"
+
+        if [[ $probe != *'This video is live.'* ]]; then
+            if (( part )); then
+                builtin print -u2 -r -- \
+                    'yt-timelapse: broadcast is no longer live; finished'
+                return 0
+            fi
+
+            builtin print -u2 -r -- \
+                'yt-timelapse: URL is not currently a live broadcast'
+            return 3
+        fi
+    fi
+
+    (( part++ ))
+
+    #
+    # Automatic filename unless single-shot mode supplied one.
+    #
+    if (( multi )) || [[ -z $output ]]; then
+        builtin strftime -s timestamp '%Y-%m-%d_%H-%M-%S'
+
+        if (( multi )); then
+            current_output="${timestamp}_part_${part}_timelapse.ts"
+        else
+            current_output="${timestamp}_timelapse.ts"
+        fi
+    else
+        current_output=$output
+    fi
+
+    if (( multi )); then
+        builtin print -u2 -r -- \
+            "yt-timelapse: recording part ${part} -> ${current_output}"
+    else
+        builtin print -u2 -r -- \
+            "yt-timelapse: recording -> ${current_output}"
+    fi
+
+    #
+    # In multi mode, if the live exists but is temporarily exposing no
+    # playable stream, keep waiting for it instead of giving up.
+    #
+    local -a streamlink_args
+
+    streamlink_args=()
+
+    if (( multi )); then
+        streamlink_args+=(
+            --retry-streams 2
+            --retry-max 0
+        )
+    fi
+
+    builtin command streamlink \
+        "${streamlink_args[@]}" \
+        "$url" best -O |
+    builtin command ffmpeg \
+        -fflags nobuffer \
+        -i - \
+        -vf 'fps=1,settb=expr=1/30,setpts=expr=N:strip_fps=1' \
+        -an \
+        -fps_mode passthrough \
+        -enc_time_base filter \
+        -c:v hevc_videotoolbox \
+        -bf 0 \
+        -realtime 1 \
+        -q:v 65 \
+        -pix_fmt yuv420p \
+        -flush_packets 1 \
+        -avioflags direct \
+        -mpegts_flags +pat_pmt_at_frames \
+        -f mpegts \
+        "$current_output"
+
+    status=$?
+
+    #
+    # Single-shot means exactly one Streamlink/FFmpeg run.
+    #
+    if (( ! multi )); then
+        return $status
+    fi
+
+    builtin print -u2 -r -- \
+        "yt-timelapse: part ${part} ended; checking broadcast again in 2s"
+
+    builtin zselect -t 20
+done
