@@ -1,0 +1,712 @@
+builtin enable emulate zmodload zparseopts zselect strftime print printf command
+builtin emulate -LR zsh
+builtin zmodload zsh/zutil zsh/zselect zsh/datetime zsh/mathfunc
+builtin setopt pipefail functionargzero
+
+local -a opt_multi opt_help opt_ext
+local -a opt_fps opt_sample_rate opt_audio opt_audio_sample_mode
+local -a muxer_args streamlink_args audio_args
+local -a tempo_filters pipeline_rc
+
+builtin zparseopts -D -E -F -- \
+    m=opt_multi \
+    -multi=opt_multi \
+    e:=opt_ext \
+    -ext:=opt_ext \
+    f:=opt_fps \
+    -fps:=opt_fps \
+    s:=opt_sample_rate \
+    -sample-rate:=opt_sample_rate \
+    a:=opt_audio \
+    -audio:=opt_audio \
+    -audio-sample-mode:=opt_audio_sample_mode \
+    h=opt_help \
+    -help=opt_help ||
+    return 2
+
+if (( ${#opt_help} )); then
+    builtin print -r -- \
+        'usage:' \
+        "  $0 [options] <url> [output]" \
+        '' \
+        'capture:' \
+        '  -m, --multi                 follow a live broadcast across reconnects' \
+        '  -e, --ext EXT               output extension/container (default: mts)' \
+        '' \
+        'sampling:' \
+        '  -f, --fps FPS               output frame rate (default: 30)' \
+        '  -s, --sample-rate RATE      input sampling cadence (default: 1s)' \
+        '' \
+        '  RATE forms:' \
+        '    1s       one frame per source second' \
+        '    500ms    one frame per 500 ms' \
+        '    30f      every 30th decoded input frame' \
+        '    1f       every decoded input frame' \
+        '' \
+        'audio:' \
+        '  -a, --audio MODE            none | scaled | sample (default: none)' \
+        '      --audio-sample-mode MODE' \
+        '                              frame | hold | interpolate (default: frame)' \
+        '' \
+        'examples:' \
+        "  $0 URL" \
+        "  $0 --multi URL" \
+        "  $0 --fps 60 --sample-rate 2s URL" \
+        "  $0 --sample-rate 1f --fps 300 URL" \
+        "  $0 --audio scaled URL" \
+        "  $0 --audio sample --audio-sample-mode hold URL"
+    return 0
+fi
+
+integer multi=${#opt_multi}
+integer part=0
+integer rc=0
+integer streamlink_rc=0
+integer ffmpeg_rc=0
+integer sample_frames=0
+integer fps_integer=0
+integer audio_sample_stride=0
+integer gate_samples=128
+integer hold_audio_rate=0
+
+local url=''
+local output=''
+local output_ext=''
+local extension='mts'
+local explicit_ext=''
+local current_output=''
+local timestamp=''
+local stream_url=''
+local playlist=''
+local ext_lower=''
+
+local fps='30'
+local sample_rate='1s'
+local sample_kind=''
+local sample_value=''
+local sample_interval_expr=''
+
+local audio='none'
+local audio_sample_mode='frame'
+local video_filter=''
+local audio_filter=''
+
+local tempo_text=''
+local sample_seconds_text=''
+local frame_duration_text=''
+
+local -F 12 fps_value=30.0
+local -F 12 sample_seconds=1.0
+local -F 12 frame_duration=0.033333333333
+local -F 12 speed_factor=30.0
+local -F 12 tempo_remaining=1.0
+
+if (( ${#opt_ext} )); then
+    explicit_ext=${opt_ext[-1]}
+    explicit_ext=${explicit_ext#.}
+
+    if [[ -z $explicit_ext || $explicit_ext == */* ]]; then
+        builtin print -u2 -r -- \
+            "$0: invalid extension: ${explicit_ext:-<empty>}"
+        return 2
+    fi
+fi
+
+if (( ${#opt_fps} )); then
+    fps=${opt_fps[-1]}
+fi
+
+if (( ${#opt_sample_rate} )); then
+    sample_rate=${opt_sample_rate[-1]}
+fi
+
+if (( ${#opt_audio} )); then
+    audio=${(L)opt_audio[-1]}
+fi
+
+if (( ${#opt_audio_sample_mode} )); then
+    audio_sample_mode=${(L)opt_audio_sample_mode[-1]}
+fi
+
+#
+# FPS
+#
+
+if [[ $fps != <-> && $fps != <->.<-> ]]; then
+    builtin print -u2 -r -- \
+        "$0: invalid --fps: $fps"
+    return 2
+fi
+
+(( fps_value = fps ))
+
+if (( fps_value <= 0 )); then
+    builtin print -u2 -r -- \
+        "$0: --fps must be greater than zero"
+    return 2
+fi
+
+if [[ $fps == <-> ]]; then
+    fps_integer=$fps
+fi
+
+#
+# Sampling cadence
+#
+
+case $sample_rate {
+    (*ms)
+        sample_value=${sample_rate%ms}
+
+        if [[ $sample_value != <-> &&
+              $sample_value != <->.<-> ]]; then
+            builtin print -u2 -r -- \
+                "$0: invalid --sample-rate: $sample_rate"
+            return 2
+        fi
+
+        (( sample_seconds = sample_value / 1000.0 ))
+        sample_interval_expr="(${sample_value}/1000)"
+        sample_kind=time
+        ;;
+
+    (*s)
+        sample_value=${sample_rate%s}
+
+        if [[ $sample_value != <-> &&
+              $sample_value != <->.<-> ]]; then
+            builtin print -u2 -r -- \
+                "$0: invalid --sample-rate: $sample_rate"
+            return 2
+        fi
+
+        (( sample_seconds = sample_value ))
+        sample_interval_expr=$sample_value
+        sample_kind=time
+        ;;
+
+    (*f)
+        sample_value=${sample_rate%f}
+
+        if [[ $sample_value != <-> ]]; then
+            builtin print -u2 -r -- \
+                "$0: frame sample rates must be whole frames: $sample_rate"
+            return 2
+        fi
+
+        sample_frames=$sample_value
+
+        if (( sample_frames <= 0 )); then
+            builtin print -u2 -r -- \
+                "$0: frame sample rate must be greater than zero"
+            return 2
+        fi
+
+        sample_kind=frame
+        ;;
+
+    (*)
+        builtin print -u2 -r -- \
+            "$0: --sample-rate requires s, ms, or f: $sample_rate"
+        return 2
+        ;;
+}
+
+if [[ $sample_kind == time ]] && (( sample_seconds <= 0 )); then
+    builtin print -u2 -r -- \
+        "$0: --sample-rate must be greater than zero"
+    return 2
+fi
+
+#
+# Audio
+#
+
+case $audio {
+    (none|scaled|sample)
+        ;;
+    (*)
+        builtin print -u2 -r -- \
+            "$0: invalid --audio mode: $audio"
+        return 2
+        ;;
+}
+
+case $audio_sample_mode {
+    (frame|hold|interpolate)
+        ;;
+    (*)
+        builtin print -u2 -r -- \
+            "$0: invalid --audio-sample-mode: $audio_sample_mode"
+        return 2
+        ;;
+}
+
+if (( ${#opt_audio_sample_mode} )) &&
+   [[ $audio != sample ]]; then
+    builtin print -u2 -r -- \
+        "$0: --audio-sample-mode requires --audio sample"
+    return 2
+fi
+
+#
+# There is deliberately no guessed audio mapping for Nf sampling.
+#
+# With VFR input, "every N decoded frames" has no single constant mapping
+# from source audio time to output time.
+#
+
+if [[ $sample_kind == frame && $audio != none ]]; then
+    builtin print -u2 -r -- \
+        "$0: audio currently requires a time-based --sample-rate"
+    return 2
+fi
+
+#
+# Build video sampling filter.
+#
+
+if [[ $sample_kind == time ]]; then
+    video_filter="setpts=PTS-STARTPTS,fps=fps=1/${sample_interval_expr},settb=expr=1/${fps},setpts=expr=N:strip_fps=1"
+
+    (( frame_duration = 1.0 / fps_value ))
+    (( speed_factor = fps_value * sample_seconds ))
+
+    builtin printf -v sample_seconds_text \
+        '%.12g' $sample_seconds
+
+    builtin printf -v frame_duration_text \
+        '%.12g' $frame_duration
+else
+    video_filter="select=not(mod(n\\,${sample_frames})),settb=expr=1/${fps},setpts=expr=N:strip_fps=1"
+fi
+
+#
+# Build audio filter.
+#
+
+audio_args=()
+
+case $audio {
+    (none)
+        audio_args+=(
+            -an
+        )
+        ;;
+
+    (scaled)
+        #
+        # Pitch-preserving continuous time scaling.
+        #
+        # atempo accepts a bounded range, so factor large/small scales
+        # into multiple stages.
+        #
+
+        tempo_filters=()
+        tempo_remaining=$speed_factor
+
+        while (( tempo_remaining > 2.0 )); do
+            tempo_filters+=('atempo=2')
+            (( tempo_remaining /= 2.0 ))
+        done
+
+        while (( tempo_remaining < 0.5 )); do
+            tempo_filters+=('atempo=0.5')
+            (( tempo_remaining /= 0.5 ))
+        done
+
+        if (( abs(tempo_remaining - 1.0) > 0.0000001 )); then
+            builtin printf -v tempo_text \
+                '%.12g' $tempo_remaining
+
+            tempo_filters+=(
+                "atempo=${tempo_text}"
+            )
+        fi
+
+        if (( ! ${#tempo_filters} )); then
+            tempo_filters=('anull')
+        fi
+
+        audio_filter="asetpts=PTS-STARTPTS,${(j:,:)tempo_filters},aresample=48000,asetpts=N/SR/TB"
+
+        audio_args+=(
+            -map '0:a:0?'
+            -af "$audio_filter"
+            -c:a aac
+            -b:a 128k
+            -ar 48000
+        )
+        ;;
+
+    (sample)
+        #
+        # The sampled modes need one audio sampling point per output
+        # video frame. Audio sample rates are integers, so keep this
+        # experimental implementation strict for now.
+        #
+
+        if (( ! fps_integer )); then
+            builtin print -u2 -r -- \
+                '--audio sample currently requires an integer --fps'
+            return 2
+        fi
+
+        if (( fps_integer > 48000 )); then
+            builtin print -u2 -r -- \
+                '--audio sample requires --fps <= 48000'
+            return 2
+        fi
+
+        #
+        # Literal audio decimation foundation for hold/interpolate.
+        #
+        # First normalize to 48 kHz, split into one-sample AVFrames, and
+        # select exactly one PCM sample at each source sampling point.
+        # Do NOT use aresample to reduce directly to FPS here: that would
+        # anti-alias/low-pass before decimation and mostly erase ordinary
+        # audio at timelapse-scale sample rates.
+        #
+
+        (( audio_sample_stride = 48000.0 * sample_seconds + 0.5 ))
+
+        if (( audio_sample_stride < 1 )); then
+            builtin print -u2 -r -- \
+                "$0: --sample-rate is smaller than one 48 kHz audio sample"
+            return 2
+        fi
+
+        case $audio_sample_mode {
+            (frame)
+                #
+                # Keep a real, normal-speed 1/FPS audio window at every
+                # source sampling point, discard the gap, then repack
+                # surviving PCM continuously.
+                #
+
+                if (( speed_factor < 1.0 )); then
+                    builtin print -u2 -r -- \
+                        '--audio-sample-mode frame does not currently support overlapping samples (speed < 1x)'
+                    return 2
+                fi
+
+                if (( abs(speed_factor - 1.0) < 0.0000001 )); then
+                    audio_filter='asetpts=PTS-STARTPTS,aresample=48000,asetpts=N/SR/TB'
+                else
+                    #
+                    # Use smaller audio frames than the sampled window so
+                    # aselect can cut reasonably close to its boundaries.
+                    #
+
+                    (( gate_samples = 12000 / fps_value ))
+
+                    if (( gate_samples > 128 )); then
+                        gate_samples=128
+                    elif (( gate_samples < 1 )); then
+                        gate_samples=1
+                    fi
+
+                    audio_filter="asetpts=PTS-STARTPTS,aresample=48000,asetnsamples=n=${gate_samples}:p=0,aselect=lt(mod(t\\,${sample_seconds_text})\\,${frame_duration_text}),asetpts=N/SR/TB"
+                fi
+                ;;
+
+            (interpolate)
+                #
+                # Literal sample + interpolation:
+                #
+                #   48 kHz PCM
+                #     -> one-sample AVFrames
+                #     -> keep one exact sample every sample interval
+                #     -> repack those samples at output FPS
+                #     -> interpolate/reconstruct to 48 kHz
+                #
+                # filter_type=cubic with filter_size=4 gives a compact
+                # interpolation kernel instead of the old pre-decimation
+                # anti-alias filter that reduced this mode to a spectral ghost.
+                #
+
+                audio_filter="asetpts=PTS-STARTPTS,aresample=48000,asetnsamples=n=1:p=0,aselect=not(mod(n\\,${audio_sample_stride})),asetpts=N/SR/TB,asetrate=${fps_integer},aresample=48000:filter_type=cubic:filter_size=4,asetpts=N/SR/TB"
+                ;;
+
+            (hold)
+                #
+                # Literal zero-order hold.
+                #
+                # At 48 kHz, capture the exact PCM value at each source
+                # sampling point and keep that value until the next point.
+                # Then reinterpret the held stream fast enough that each
+                # source sampling interval becomes exactly one output frame.
+                #
+
+                (( hold_audio_rate = fps_integer * audio_sample_stride ))
+
+                audio_filter="asetpts=PTS-STARTPTS,aresample=48000,aeval=if(eq(mod(n\\,${audio_sample_stride})\\,0)\\,st(ch\\,val(ch))\\,ld(ch)):c=same,asetrate=${hold_audio_rate},aresample=48000:filter_size=1,asetpts=N/SR/TB"
+                ;;
+        }
+
+        audio_args+=(
+            -map '0:a:0?'
+            -af "$audio_filter"
+            -c:a aac
+            -b:a 128k
+            -ar 48000
+        )
+        ;;
+}
+
+#
+# Output naming/container.
+#
+
+if (( multi )); then
+    if (( $# != 1 )); then
+        builtin print -u2 -r -- \
+            "$0: --multi takes exactly one URL; filenames are automatic"
+        return 2
+    fi
+
+    url=$1
+    extension=${explicit_ext:-mts}
+else
+    if (( $# < 1 || $# > 2 )); then
+        builtin print -u2 -r -- \
+            "usage: $0 [options] <url> [output]"
+        return 2
+    fi
+
+    url=$1
+    output=${2-}
+
+    if [[ -n $output ]]; then
+        output_ext=${output:t:e}
+
+        if [[ -n $output_ext ]]; then
+            extension=$output_ext
+
+            if [[ -n $explicit_ext &&
+                  ${(L)explicit_ext} != ${(L)output_ext} ]]; then
+                builtin print -u2 -r -- \
+                    "$0: --ext .${explicit_ext} conflicts with output .${output_ext}"
+                return 2
+            fi
+        else
+            extension=${explicit_ext:-mts}
+            output="${output}.${extension}"
+        fi
+    else
+        extension=${explicit_ext:-mts}
+    fi
+fi
+
+ext_lower=${(L)extension}
+muxer_args=()
+
+case $ext_lower {
+    (ts|mts|m2t|m2ts)
+        muxer_args+=(
+            -mpegts_flags +pat_pmt_at_frames
+        )
+        ;;
+
+    (mp4|m4v|mov)
+        muxer_args+=(
+            -tag:v hvc1
+            -movflags +faststart
+        )
+        ;;
+}
+
+#
+# Main capture/reconnect loop.
+#
+
+while (( 1 )); do
+    if (( multi )); then
+        while (( 1 )); do
+            stream_url=$(
+                builtin command streamlink \
+                    --stream-url \
+                    "$url" best \
+                    2>/dev/null
+            )
+            rc=$?
+
+            if (( rc )) || [[ -z $stream_url ]]; then
+                builtin print -u2 -r -- \
+                    "$0: stream unavailable; retrying in 2s"
+                builtin zselect -t 200
+                continue
+            fi
+
+            playlist=$(
+                builtin command /usr/bin/curl \
+                    -LfsS \
+                    --max-time 15 \
+                    "$stream_url" \
+                    2>/dev/null
+            )
+            rc=$?
+
+            if (( rc )) || [[ -z $playlist ]]; then
+                builtin print -u2 -r -- \
+                    "$0: could not inspect stream; retrying in 2s"
+                builtin zselect -t 200
+                continue
+            fi
+
+            if [[ $playlist == *'#EXT-X-STREAM-INF'* ]]; then
+                stream_url=$(
+                    builtin command streamlink \
+                        --stream-url \
+                        "$stream_url" best \
+                        2>/dev/null
+                )
+                rc=$?
+
+                if (( rc )) || [[ -z $stream_url ]]; then
+                    builtin print -u2 -r -- \
+                        "$0: could not resolve media playlist; retrying in 2s"
+                    builtin zselect -t 200
+                    continue
+                fi
+
+                playlist=$(
+                    builtin command /usr/bin/curl \
+                        -LfsS \
+                        --max-time 15 \
+                        "$stream_url" \
+                        2>/dev/null
+                )
+                rc=$?
+
+                if (( rc )) || [[ -z $playlist ]]; then
+                    builtin print -u2 -r -- \
+                        "$0: could not inspect media playlist; retrying in 2s"
+                    builtin zselect -t 200
+                    continue
+                fi
+            fi
+
+            if [[ $playlist == *'#EXT-X-ENDLIST'* ||
+                  $playlist == *'#EXT-X-PLAYLIST-TYPE:VOD'* ]]; then
+                if (( part )); then
+                    builtin print -u2 -r -- \
+                        "$0: broadcast ended; finished"
+                    return 0
+                fi
+
+                builtin print -u2 -r -- \
+                    "$0: --multi requires a currently-live broadcast"
+                return 3
+            fi
+
+            if [[ $playlist == '#EXTM3U'* &&
+                  ( $playlist == *'#EXTINF:'* ||
+                    $playlist == *'#EXT-X-MEDIA-SEQUENCE:'* ) ]]; then
+                break
+            fi
+
+            builtin print -u2 -r -- \
+                "$0: unclear playlist state; retrying in 2s"
+
+            builtin zselect -t 200
+        done
+    fi
+
+    (( part++ ))
+
+    if (( multi )); then
+        builtin strftime -s timestamp '%Y-%m-%d_%H-%M-%S'
+        current_output="${timestamp}_part_${part}_timelapse.${extension}"
+    elif [[ -n $output ]]; then
+        current_output=$output
+    else
+        builtin strftime -s timestamp '%Y-%m-%d_%H-%M-%S'
+        current_output="${timestamp}_timelapse.${extension}"
+    fi
+
+    if (( multi )); then
+        builtin print -u2 -r -- \
+            "$0: recording part ${part} -> ${current_output}"
+    else
+        builtin print -u2 -r -- \
+            "$0: recording -> ${current_output}"
+    fi
+
+    builtin print -u2 -r -- \
+        "$0: ${sample_rate} -> ${fps} fps; audio=${audio}${${(M)audio:#sample}:+/${audio_sample_mode}}"
+
+    streamlink_args=()
+
+    if (( multi )); then
+        streamlink_args+=(
+            --retry-streams 2
+            --retry-max 0
+        )
+    fi
+
+    builtin command streamlink \
+        "${streamlink_args[@]}" \
+        "$url" best -O |
+    builtin command ffmpeg \
+        -fflags nobuffer \
+        -i - \
+        -map 0:v:0 \
+        "${audio_args[@]}" \
+        -vf "$video_filter" \
+        -fps_mode passthrough \
+        -enc_time_base filter \
+        -c:v hevc_videotoolbox \
+        -bf 0 \
+        -realtime 1 \
+        -q:v 65 \
+        -pix_fmt yuv420p \
+        -flush_packets 1 \
+        -avioflags direct \
+        "${muxer_args[@]}" \
+        "$current_output"
+
+    #
+    # SAVE THIS IMMEDIATELY.
+    #
+    pipeline_rc=("${pipestatus[@]}")
+
+    streamlink_rc=${pipeline_rc[1]}
+    ffmpeg_rc=${pipeline_rc[2]}
+
+    #
+    # FFmpeg explicitly reports handled termination signals as 255.
+    # One Ctrl+C therefore means STOP, not "please reconnect".
+    #
+
+    if (( ffmpeg_rc == 255 )); then
+        return 255
+    fi
+
+    #
+    # Fallback if Streamlink saw SIGINT but FFmpeg happened to finish
+    # without its own signal status.
+    #
+
+    if (( streamlink_rc == 130 )); then
+        return 130
+    fi
+
+    #
+    # A genuine FFmpeg/filter/encoder failure should not become an
+    # infinite --multi reconnect loop.
+    #
+
+    if (( ffmpeg_rc )); then
+        return $ffmpeg_rc
+    fi
+
+    if (( ! multi )); then
+        return $streamlink_rc
+    fi
+
+    builtin print -u2 -r -- \
+        "$0: part ${part} ended; checking for continuation in 2s"
+
+    builtin zselect -t 200
+done
