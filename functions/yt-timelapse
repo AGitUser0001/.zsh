@@ -319,8 +319,9 @@ while (( 1 )); do
 
     #
     # Don't resurrect after deliberate interruption.
+    # ffmpeg returns 255 when receiving a signal.
     #
-    if (( rc == 130 || rc == 143 )); then
+    if (( rc == 255 )); then
         return $rc
     fi
 
