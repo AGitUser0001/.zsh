@@ -32,7 +32,7 @@ local timestamp=''
 local probe=''
 
 integer part=0
-integer status=0
+integer s=0
 
 if (( multi )); then
     if (( $# != 1 )); then
@@ -146,13 +146,13 @@ while (( 1 )); do
         -f mpegts \
         "$current_output"
 
-    status=$?
+    s=$?
 
     #
     # Single-shot means exactly one Streamlink/FFmpeg run.
     #
     if (( ! multi )); then
-        return $status
+        return $s
     fi
 
     builtin print -u2 -r -- \
