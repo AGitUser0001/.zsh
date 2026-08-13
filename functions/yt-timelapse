@@ -1,27 +1,31 @@
-builtin enable emulate zmodload command print strftime zparseopts zselect
+builtin enable emulate zmodload zparseopts zselect strftime print command
 builtin emulate -LR zsh
-builtin zmodload zsh/zutil zsh/datetime zsh/zselect
+builtin zmodload zsh/zutil zsh/zselect zsh/datetime
 builtin setopt pipefail
 
-local -a opt_multi opt_help
+local -a opt_multi opt_help opt_ext
+local -a muxer_args streamlink_args
 
 builtin zparseopts -D -E -F -- \
     m=opt_multi \
     -multi=opt_multi \
+    e:=opt_ext \
+    -ext:=opt_ext \
     h=opt_help \
     -help=opt_help ||
     return 2
 
 if (( ${#opt_help} )); then
     builtin print -r -- \
-        'usage: yt-timelapse [-m|--multi] <url> [output.ts]' \
+        'usage: yt-timelapse [-m|--multi] [-e|--ext EXT] <url> [output]' \
         '' \
-        'single:' \
-        '  yt-timelapse <url>' \
-        '  yt-timelapse <url> output.ts' \
-        '' \
-        'multi/live:' \
-        '  yt-timelapse --multi <url>'
+        'examples:' \
+        '  yt-timelapse URL' \
+        '  yt-timelapse URL video' \
+        '  yt-timelapse URL video.mp4' \
+        '  yt-timelapse --ext mkv URL' \
+        '  yt-timelapse --multi URL' \
+        '  yt-timelapse --multi --ext ts URL'
     return 0
 fi
 
@@ -31,11 +35,32 @@ integer rc=0
 
 local url=''
 local output=''
+local output_ext=''
+local extension='mts'
+local explicit_ext=''
 local current_output=''
 local timestamp=''
 local stream_url=''
 local playlist=''
+local ext_lower=''
 
+#
+# Resolve --ext.
+#
+if (( ${#opt_ext} )); then
+    explicit_ext=${opt_ext[-1]}
+    explicit_ext=${explicit_ext#.}
+
+    if [[ -z $explicit_ext || $explicit_ext == */* ]]; then
+        builtin print -u2 -r -- \
+            "yt-timelapse: invalid extension: ${explicit_ext:-<empty>}"
+        return 2
+    fi
+fi
+
+#
+# Resolve positional arguments and filename.
+#
 if (( multi )); then
     if (( $# != 1 )); then
         builtin print -u2 -r -- \
@@ -44,24 +69,80 @@ if (( multi )); then
     fi
 
     url=$1
+    extension=${explicit_ext:-mts}
 else
     if (( $# < 1 || $# > 2 )); then
         builtin print -u2 -r -- \
-            'usage: yt-timelapse [-m|--multi] <url> [output.ts]'
+            'usage: yt-timelapse [-m|--multi] [-e|--ext EXT] <url> [output]'
         return 2
     fi
 
     url=$1
     output=${2-}
+
+    if [[ -n $output ]]; then
+        output_ext=${output:t:e}
+
+        if [[ -n $output_ext ]]; then
+            #
+            # Filename already chooses the container.
+            #
+            extension=$output_ext
+
+            if [[ -n $explicit_ext &&
+                  ${(L)explicit_ext} != ${(L)output_ext} ]]; then
+                builtin print -u2 -r -- \
+                    "yt-timelapse: --ext .${explicit_ext} conflicts with output .${output_ext}"
+                return 2
+            fi
+        else
+            #
+            # Explicit basename but no extension.
+            #
+            extension=${explicit_ext:-mts}
+            output="${output}.${extension}"
+        fi
+    else
+        extension=${explicit_ext:-mts}
+    fi
 fi
+
+#
+# Add muxer-specific niceties while still letting FFmpeg infer
+# the actual output format from the filename.
+#
+ext_lower=${(L)extension}
+muxer_args=()
+
+case $ext_lower {
+    (ts|mts|m2t|m2ts)
+        #
+        # Make an actively-growing transport stream easier to join/read.
+        #
+        muxer_args+=(
+            -mpegts_flags +pat_pmt_at_frames
+        )
+        ;;
+
+    (mp4|m4v|mov)
+        #
+        # Apple-friendly HEVC tag and nicer finalized files.
+        # Note: these aren't as useful as MPEG-TS while still growing.
+        #
+        muxer_args+=(
+            -tag:v hvc1
+            -movflags +faststart
+        )
+        ;;
+}
 
 while (( 1 )); do
     #
-    # Multi mode is live-follow mode.
+    # --multi is specifically "follow this live broadcast".
     #
-    # Before each new recording process, resolve the currently selected
-    # HLS playlist and make sure YouTube hasn't turned the broadcast into
-    # a finished replay/VOD.
+    # Before each new chunk, resolve its current HLS presentation and
+    # ensure it has not become an archived VOD. Single-shot mode does
+    # none of this and can therefore happily timelapse a VOD.
     #
     if (( multi )); then
         while (( 1 )); do
@@ -75,7 +156,7 @@ while (( 1 )); do
 
             if (( rc )) || [[ -z $stream_url ]]; then
                 builtin print -u2 -r -- \
-                    'yt-timelapse: live stream temporarily unavailable; retrying in 2s'
+                    'yt-timelapse: stream unavailable; retrying in 2s'
                 builtin zselect -t 200
                 continue
             fi
@@ -91,15 +172,15 @@ while (( 1 )); do
 
             if (( rc )) || [[ -z $playlist ]]; then
                 builtin print -u2 -r -- \
-                    'yt-timelapse: could not inspect playlist; retrying in 2s'
+                    'yt-timelapse: could not inspect stream; retrying in 2s'
                 builtin zselect -t 200
                 continue
             fi
 
             #
-            # Defensive case: if --stream-url somehow yielded a
-            # multivariant/master playlist, ask Streamlink to select
-            # "best" from that playlist as well.
+            # Defensive: if Streamlink gave us a multivariant/master
+            # playlist, resolve "best" from that before deciding whether
+            # the presentation has ended.
             #
             if [[ $playlist == *'#EXT-X-STREAM-INF'* ]]; then
                 stream_url=$(
@@ -135,8 +216,12 @@ while (( 1 )); do
             fi
 
             #
-            # Finished HLS presentations must not be reopened in --multi
-            # mode, otherwise we'd speedrun the archived broadcast again.
+            # This is the thing that prevents:
+            #
+            # live ends
+            # → Streamlink reopens archived broadcast from t=0
+            # → eats whole VOD at warp speed
+            # → repeats forever :3
             #
             if [[ $playlist == *'#EXT-X-ENDLIST'* ||
                   $playlist == *'#EXT-X-PLAYLIST-TYPE:VOD'* ]]; then
@@ -147,12 +232,12 @@ while (( 1 )); do
                 fi
 
                 builtin print -u2 -r -- \
-                    'yt-timelapse: URL is an ended broadcast/VOD; --multi requires live HLS'
+                    'yt-timelapse: --multi requires a currently-live broadcast'
                 return 3
             fi
 
             #
-            # Looks like an actual media playlist and isn't ended.
+            # Looks sufficiently like an active media playlist.
             #
             if [[ $playlist == '#EXTM3U'* &&
                   ( $playlist == *'#EXTINF:'* ||
@@ -161,7 +246,7 @@ while (( 1 )); do
             fi
 
             builtin print -u2 -r -- \
-                'yt-timelapse: playlist state is unclear; retrying in 2s'
+                'yt-timelapse: unclear playlist state; retrying in 2s'
             builtin zselect -t 200
         done
     fi
@@ -169,19 +254,16 @@ while (( 1 )); do
     (( part++ ))
 
     #
-    # Single mode may use an explicit name.
-    # Multi always gets a fresh automatic name.
+    # Construct filename.
     #
-    if (( multi )) || [[ -z $output ]]; then
+    if (( multi )); then
         builtin strftime -s timestamp '%Y-%m-%d_%H-%M-%S'
-
-        if (( multi )); then
-            current_output="${timestamp}_part_${part}_timelapse.ts"
-        else
-            current_output="${timestamp}_timelapse.ts"
-        fi
-    else
+        current_output="${timestamp}_part_${part}_timelapse.${extension}"
+    elif [[ -n $output ]]; then
         current_output=$output
+    else
+        builtin strftime -s timestamp '%Y-%m-%d_%H-%M-%S'
+        current_output="${timestamp}_timelapse.${extension}"
     fi
 
     if (( multi )); then
@@ -192,7 +274,21 @@ while (( 1 )); do
             "yt-timelapse: recording -> ${current_output}"
     fi
 
+    #
+    # Multi gets a little patience if the broadcast is temporarily
+    # unavailable between our check and the actual opening.
+    #
+    streamlink_args=()
+
+    if (( multi )); then
+        streamlink_args+=(
+            --retry-streams 2
+            --retry-max 0
+        )
+    fi
+
     builtin command streamlink \
+        "${streamlink_args[@]}" \
         "$url" best -O |
     builtin command ffmpeg \
         -fflags nobuffer \
@@ -208,28 +304,28 @@ while (( 1 )); do
         -pix_fmt yuv420p \
         -flush_packets 1 \
         -avioflags direct \
-        -mpegts_flags +pat_pmt_at_frames \
-        -f mpegts \
+        "${muxer_args[@]}" \
         "$current_output"
 
     rc=$?
 
     #
-    # Normal mode means exactly one run, live or VOD.
+    # Single mode = one run only, regardless of whether URL was
+    # live or VOD.
     #
     if (( ! multi )); then
         return $rc
     fi
 
     #
-    # Don't interpret Ctrl-C / TERM as "please reconnect".
+    # Don't resurrect after deliberate interruption.
     #
     if (( rc == 130 || rc == 143 )); then
         return $rc
     fi
 
     builtin print -u2 -r -- \
-        "yt-timelapse: part ${part} ended; checking for a continuing live broadcast in 2s"
+        "yt-timelapse: part ${part} ended; checking for continuation in 2s"
 
     builtin zselect -t 200
 done
