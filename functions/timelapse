@@ -5,7 +5,7 @@ builtin setopt pipefail functionargzero
 
 local -a opt_multi opt_help opt_ext
 local -a opt_fps opt_sample_rate opt_audio opt_audio_sample_mode
-local -a muxer_args streamlink_args audio_args
+local -a muxer_args streamlink_args audio_args ffmpeg_input_args
 local -a tempo_filters pipeline_rc
 
 builtin zparseopts -D -E -F -- \
@@ -27,10 +27,12 @@ builtin zparseopts -D -E -F -- \
 if (( ${#opt_help} )); then
     builtin command cat <<EOF
 usage:
-  $0 [options] <url> [output]
+  $0 [options] <source> [output]
 
 capture:
+  SOURCE                      Streamlink URL or local media file
   -m, --multi                 follow a live broadcast across reconnects
+                              (Streamlink sources only)
   -e, --ext EXT               output extension/container (default: mts)
 
 sampling:
@@ -51,6 +53,8 @@ audio:
 
 examples:
   $0 URL
+  $0 ./video.mp4
+  $0 ./video.mp4 output.mkv
   $0 --multi URL
   $0 --fps 60 --sample-rate 2s URL
   $0 --sample-rate 1f --fps 300 URL
@@ -74,7 +78,9 @@ integer spectral_steps=8
 integer spectral_internal_fps=0
 integer spectral_hop_samples=0
 integer spectral_fft_size=4096
+integer source_is_file=0
 
+local source=''
 local url=''
 local output=''
 local output_ext=''
@@ -537,17 +543,31 @@ if (( multi )); then
         return 2
     fi
 
-    url=$1
+    source=$1
+
+    if [[ -f $source ]]; then
+        builtin print -u2 -r -- \
+            "$0: --multi is only supported for Streamlink sources"
+        return 2
+    fi
+
+    url=$source
     extension=${explicit_ext:-mts}
 else
     if (( $# < 1 || $# > 2 )); then
         builtin print -u2 -r -- \
-            "usage: $0 [options] <url> [output]"
+            "usage: $0 [options] <source> [output]"
         return 2
     fi
 
-    url=$1
+    source=$1
     output=${2-}
+
+    if [[ -f $source ]]; then
+        source_is_file=1
+    else
+        url=$source
+    fi
 
     if [[ -n $output ]]; then
         output_ext=${output:t:e}
@@ -709,42 +729,75 @@ while (( 1 )); do
         "$0: ${sample_rate} -> ${fps} fps; audio=${audio}${${(M)audio:#sample}:+/${audio_sample_mode}}"
 
     streamlink_args=()
+    ffmpeg_input_args=()
 
-    if (( multi )); then
-        streamlink_args+=(
-            --retry-streams 2
-            --retry-max 0
+    if (( source_is_file )); then
+        ffmpeg_input_args+=(
+            -i "$source"
         )
+    else
+        ffmpeg_input_args+=(
+            -fflags nobuffer
+            -i -
+        )
+
+        if (( multi )); then
+            streamlink_args+=(
+                --retry-streams 2
+                --retry-max 0
+            )
+        fi
     fi
 
-    builtin command streamlink \
-        "${streamlink_args[@]}" \
-        "$url" best -O |
-    builtin command ffmpeg \
-        -fflags nobuffer \
-        -i - \
-        -map 0:v:0 \
-        "${audio_args[@]}" \
-        -vf "$video_filter" \
-        -fps_mode passthrough \
-        -enc_time_base filter \
-        -c:v hevc_videotoolbox \
-        -bf 0 \
-        -realtime 1 \
-        -q:v 65 \
-        -pix_fmt yuv420p \
-        -flush_packets 1 \
-        -avioflags direct \
-        "${muxer_args[@]}" \
-        "$current_output"
+    if (( source_is_file )); then
+        builtin command ffmpeg \
+            "${ffmpeg_input_args[@]}" \
+            -map 0:v:0 \
+            "${audio_args[@]}" \
+            -vf "$video_filter" \
+            -fps_mode passthrough \
+            -enc_time_base filter \
+            -c:v hevc_videotoolbox \
+            -bf 0 \
+            -realtime 1 \
+            -q:v 65 \
+            -pix_fmt yuv420p \
+            -flush_packets 1 \
+            -avioflags direct \
+            "${muxer_args[@]}" \
+            "$current_output"
 
-    #
-    # SAVE THIS IMMEDIATELY.
-    #
-    pipeline_rc=("${pipestatus[@]}")
+        ffmpeg_rc=$?
+        streamlink_rc=0
+    else
+        builtin command streamlink \
+            "${streamlink_args[@]}" \
+            "$url" best -O |
+        builtin command ffmpeg \
+            "${ffmpeg_input_args[@]}" \
+            -map 0:v:0 \
+            "${audio_args[@]}" \
+            -vf "$video_filter" \
+            -fps_mode passthrough \
+            -enc_time_base filter \
+            -c:v hevc_videotoolbox \
+            -bf 0 \
+            -realtime 1 \
+            -q:v 65 \
+            -pix_fmt yuv420p \
+            -flush_packets 1 \
+            -avioflags direct \
+            "${muxer_args[@]}" \
+            "$current_output"
 
-    streamlink_rc=${pipeline_rc[1]}
-    ffmpeg_rc=${pipeline_rc[2]}
+        #
+        # SAVE THIS IMMEDIATELY.
+        #
+        pipeline_rc=("${pipestatus[@]}")
+
+        streamlink_rc=${pipeline_rc[1]}
+        ffmpeg_rc=${pipeline_rc[2]}
+    fi
 
     #
     # FFmpeg explicitly reports handled termination signals as 255.
