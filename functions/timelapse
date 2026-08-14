@@ -631,7 +631,7 @@ else
             fi
         else
             if (( audio_only )); then
-                extension=${explicit_ext:-m4a}
+                extension=${explicit_ext:-mts}
             else
                 extension=${explicit_ext:-mts}
             fi
@@ -639,7 +639,7 @@ else
         fi
     else
         if (( audio_only )); then
-            extension=${explicit_ext:-m4a}
+            extension=${explicit_ext:-mts}
         else
             extension=${explicit_ext:-mts}
         fi
