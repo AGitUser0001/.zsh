@@ -55,6 +55,8 @@ examples:
   $0 URL
   $0 ./video.mp4
   $0 ./video.mp4 output.mkv
+  $0 --audio scaled ./audio.flac
+  $0 --audio sample --audio-sample-mode spectral-hold ./audio.flac
   $0 --multi URL
   $0 --fps 60 --sample-rate 2s URL
   $0 --sample-rate 1f --fps 300 URL
@@ -79,6 +81,9 @@ integer spectral_internal_fps=0
 integer spectral_hop_samples=0
 integer spectral_fft_size=4096
 integer source_is_file=0
+integer source_has_video=1
+integer source_has_audio=0
+integer audio_only=0
 
 local source=''
 local url=''
@@ -91,6 +96,8 @@ local timestamp=''
 local stream_url=''
 local playlist=''
 local ext_lower=''
+local probe_video=''
+local probe_audio=''
 
 local fps='30'
 local sample_rate='1s'
@@ -533,7 +540,7 @@ case $audio {
 }
 
 #
-# Output naming/container.
+# Output naming/container and source probing.
 #
 
 if (( multi )); then
@@ -565,6 +572,47 @@ else
 
     if [[ -f $source ]]; then
         source_is_file=1
+
+        probe_video=$(
+            builtin command ffprobe \
+                -v error \
+                -select_streams v:0 \
+                -show_entries stream=index \
+                -of csv=p=0 \
+                "$source"
+        )
+        probe_audio=$(
+            builtin command ffprobe \
+                -v error \
+                -select_streams a:0 \
+                -show_entries stream=index \
+                -of csv=p=0 \
+                "$source"
+        )
+
+        if [[ -z $probe_video ]]; then
+            source_has_video=0
+        fi
+
+        if [[ -n $probe_audio ]]; then
+            source_has_audio=1
+        fi
+
+        if (( ! source_has_video )); then
+            if (( ! source_has_audio )); then
+                builtin print -u2 -r -- \
+                    "$0: local file has neither video nor audio streams"
+                return 2
+            fi
+
+            if [[ $audio == none ]]; then
+                builtin print -u2 -r -- \
+                    "$0: audio-only input requires --audio != none"
+                return 2
+            fi
+
+            audio_only=1
+        fi
     else
         url=$source
     fi
@@ -582,11 +630,19 @@ else
                 return 2
             fi
         else
-            extension=${explicit_ext:-mts}
+            if (( audio_only )); then
+                extension=${explicit_ext:-m4a}
+            else
+                extension=${explicit_ext:-mts}
+            fi
             output="${output}.${extension}"
         fi
     else
-        extension=${explicit_ext:-mts}
+        if (( audio_only )); then
+            extension=${explicit_ext:-m4a}
+        else
+            extension=${explicit_ext:-mts}
+        fi
     fi
 fi
 
@@ -603,6 +659,11 @@ case $ext_lower {
     (mp4|m4v|mov)
         muxer_args+=(
             -tag:v hvc1
+            -movflags +faststart
+        )
+        ;;
+    (m4a)
+        muxer_args+=(
             -movflags +faststart
         )
         ;;
@@ -750,22 +811,33 @@ while (( 1 )); do
     fi
 
     if (( source_is_file )); then
-        builtin command ffmpeg \
-            "${ffmpeg_input_args[@]}" \
-            -map 0:v:0 \
-            "${audio_args[@]}" \
-            -vf "$video_filter" \
-            -fps_mode passthrough \
-            -enc_time_base filter \
-            -c:v hevc_videotoolbox \
-            -bf 0 \
-            -realtime 1 \
-            -q:v 65 \
-            -pix_fmt yuv420p \
-            -flush_packets 1 \
-            -avioflags direct \
-            "${muxer_args[@]}" \
-            "$current_output"
+        if (( audio_only )); then
+            builtin command ffmpeg \
+                "${ffmpeg_input_args[@]}" \
+                "${audio_args[@]}" \
+                -vn \
+                -flush_packets 1 \
+                -avioflags direct \
+                "${muxer_args[@]}" \
+                "$current_output"
+        else
+            builtin command ffmpeg \
+                "${ffmpeg_input_args[@]}" \
+                -map 0:v:0 \
+                "${audio_args[@]}" \
+                -vf "$video_filter" \
+                -fps_mode passthrough \
+                -enc_time_base filter \
+                -c:v hevc_videotoolbox \
+                -bf 0 \
+                -realtime 1 \
+                -q:v 65 \
+                -pix_fmt yuv420p \
+                -flush_packets 1 \
+                -avioflags direct \
+                "${muxer_args[@]}" \
+                "$current_output"
+        fi
 
         ffmpeg_rc=$?
         streamlink_rc=0
