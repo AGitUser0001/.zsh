@@ -5,7 +5,7 @@ builtin setopt pipefail functionargzero
 
 local -a opt_multi opt_help opt_ext
 local -a opt_fps opt_sample_rate opt_audio opt_audio_sample_mode
-local -a muxer_args streamlink_args audio_args ffmpeg_input_args
+local -a muxer_args streamlink_args audio_args audio_codec_args ffmpeg_input_args
 local -a tempo_filters pipeline_rc
 
 builtin zparseopts -D -E -F -- \
@@ -76,9 +76,9 @@ integer fps_integer=0
 integer audio_sample_stride=0
 integer gate_samples=128
 integer hold_audio_rate=0
-integer spectral_steps=8
-integer spectral_internal_fps=0
 integer spectral_hop_samples=0
+integer spectral_phase_gate_samples=64
+integer spectral_phase_window_samples=0
 integer spectral_fft_size=4096
 integer source_is_file=0
 integer source_has_video=1
@@ -115,6 +115,7 @@ local sample_seconds_text=''
 local frame_duration_text=''
 local spectral_overlap_text=''
 local spectral_temporal_filter=''
+local spectral_internal_fps=''
 local spectral_filter_complex=''
 
 local -F 12 fps_value=30.0
@@ -356,9 +357,6 @@ case $audio {
         audio_args+=(
             -map '0:a:0?'
             -af "$audio_filter"
-            -c:a aac
-            -b:a 128k
-            -ar 48000
         )
         ;;
 
@@ -469,42 +467,64 @@ case $audio {
 
             (spectral-hold|spectral-interpolate)
                 #
-                # Spectral sampling.
+                # Spectral sampling with source-derived phase evolution.
                 #
-                # Convert the audio into one-column magnitude + phase spectra,
-                # sample those spectrum frames at the same source cadence as
-                # the video, retime them to the output FPS, then synthesize
-                # audio from the sampled spectra again.
+                # Magnitude is sampled at the requested source cadence and then
+                # held or interpolated on the compressed timeline. Phase is NOT
+                # held, linearly interpolated, or regenerated from FFT-bin centers:
+                # all three approaches leave audible implementation fingerprints.
                 #
-                # Use a higher internal spectral rate so one output video frame
-                # contains several overlap-add synthesis windows. spectral-hold
-                # duplicates each sampled spectrum; spectral-interpolate blends
-                # between neighboring magnitude/phase images before synthesis.
+                # Instead, build a short phase-donor waveform using the same
+                # source sampling points as the video: keep exactly one output-frame
+                # worth of source PCM at each sampling point, concatenate those
+                # snippets, and analyze their real STFT phase continuously. That
+                # preserves off-bin frequency/phase motion without introducing a
+                # hidden N*FPS clock or phase-locking every FFT bin together.
                 #
-                # Phase interpolation is deliberately experimental: phase is
-                # circular, while FFmpeg's framerate filter blends pixel values
-                # linearly. This is still much closer to "sample the spectrum"
-                # than sampling one PCM amplitude.
+                # The fixed 4096-point Hann analysis still defines the intended
+                # spectral geometry. A 512-sample synthesis hop (87.5% overlap)
+                # is numerical resolution only; reducing it further converges to
+                # the same result instead of moving an audible comb.
                 #
 
-                (( spectral_internal_fps = fps_integer * spectral_steps ))
-                (( spectral_hop_samples = 48000.0 / spectral_internal_fps + 0.5 ))
+                if (( speed_factor < 1.0 )); then
+                    builtin print -u2 -r -- \
+                        "$0: spectral audio sampling currently requires speed >= 1x"
+                    return 2
+                fi
+
+                spectral_hop_samples=512
+
+                if (( fps_integer * spectral_hop_samples > 48000 )); then
+                    (( spectral_hop_samples = 48000 / fps_integer ))
+                fi
 
                 if (( spectral_hop_samples < 1 )); then
                     spectral_hop_samples=1
                 fi
 
-                while (( spectral_fft_size < spectral_hop_samples )); do
-                    (( spectral_fft_size *= 2 ))
-                done
-
-                if (( spectral_fft_size > 65536 )); then
-                    builtin print -u2 -r -- \
-                        "$0: --fps is too low for spectral audio sampling"
-                    return 2
-                fi
+                spectral_internal_fps="48000/${spectral_hop_samples}"
 
                 (( spectral_overlap = 1.0 - spectral_hop_samples / (1.0 * spectral_fft_size) ))
+                (( spectral_phase_window_samples = 48000.0 / fps_value + 0.5 ))
+
+                if (( spectral_phase_window_samples < 1 )); then
+                    spectral_phase_window_samples=1
+                fi
+
+                # Fine framing keeps source-window selection deterministic. Use
+                # sample counts rather than mod(t,...): floating timestamp boundary
+                # error can otherwise select one extra block per interval and
+                # audibly pitch-shift even a pure tone.
+                spectral_phase_gate_samples=64
+
+                if (( spectral_phase_gate_samples > spectral_phase_window_samples )); then
+                    spectral_phase_gate_samples=$spectral_phase_window_samples
+                fi
+
+                if (( spectral_phase_gate_samples < 1 )); then
+                    spectral_phase_gate_samples=1
+                fi
 
                 builtin printf -v spectral_overlap_text \
                     '%.12g' $spectral_overlap
@@ -512,10 +532,12 @@ case $audio {
                 if [[ $audio_sample_mode == spectral-hold ]]; then
                     spectral_temporal_filter="fps=fps=${spectral_internal_fps}"
                 else
+                    # Magnitude is represented in log scale, so linear pixel
+                    # interpolation is a geometric-style amplitude morph.
                     spectral_temporal_filter="framerate=fps=${spectral_internal_fps}:interp_start=0:interp_end=255:scene=100"
                 fi
 
-                spectral_filter_complex="[0:a:0]asetpts=PTS-STARTPTS,aresample=48000,aformat=channel_layouts=stereo,asplit=2[spec_mag_src][spec_phase_src];[spec_mag_src]showspectrum=s=1x${spectral_fft_size}:slide=fullframe:mode=separate:color=channel:scale=log:win_func=hann:overlap=${spectral_overlap_text}:data=magnitude,fps=fps=1/${sample_seconds_text},settb=expr=1/${fps},setpts=N,${spectral_temporal_filter}[spec_mag];[spec_phase_src]showspectrum=s=1x${spectral_fft_size}:slide=fullframe:mode=separate:color=channel:scale=lin:win_func=hann:overlap=${spectral_overlap_text}:data=phase,fps=fps=1/${sample_seconds_text},settb=expr=1/${fps},setpts=N,${spectral_temporal_filter}[spec_phase];[spec_mag][spec_phase]spectrumsynth=channels=2:sample_rate=48000:scale=log:slide=fullframe:win_func=hann:overlap=${spectral_overlap_text},aformat=channel_layouts=stereo,asetpts=N/SR/TB[spectral_audio]"
+                spectral_filter_complex="[0:a:0]asetpts=PTS-STARTPTS,aresample=48000,aformat=channel_layouts=stereo,asplit=2[spec_mag_audio][spec_phase_audio];[spec_mag_audio]showspectrum=s=1x${spectral_fft_size}:slide=fullframe:mode=separate:color=channel:scale=log:win_func=hann:overlap=${spectral_overlap_text}:data=magnitude,fps=fps=1/${sample_seconds_text},settb=expr=1/${fps},setpts=N,${spectral_temporal_filter},settb=expr=${spectral_hop_samples}/48000,setpts=N[spec_mag];[spec_phase_audio]asetnsamples=n=${spectral_phase_gate_samples}:p=0,aselect=lt(mod(n*${spectral_phase_gate_samples}\,${audio_sample_stride})\,${spectral_phase_window_samples}),asetpts=N/SR/TB,showspectrum=s=1x${spectral_fft_size}:slide=fullframe:mode=separate:color=channel:scale=lin:win_func=hann:overlap=${spectral_overlap_text}:data=phase,settb=expr=${spectral_hop_samples}/48000,setpts=N[spec_phase];[spec_mag][spec_phase]spectrumsynth=channels=2:sample_rate=48000:scale=log:slide=fullframe:win_func=hann:overlap=${spectral_overlap_text},aformat=channel_layouts=stereo,asetpts=N/SR/TB[spectral_audio]"
                 ;;
         }
 
@@ -523,17 +545,11 @@ case $audio {
             audio_args+=(
                 -filter_complex "$spectral_filter_complex"
                 -map '[spectral_audio]'
-                -c:a aac
-                -b:a 128k
-                -ar 48000
             )
         else
             audio_args+=(
                 -map '0:a:0?'
                 -af "$audio_filter"
-                -c:a aac
-                -b:a 128k
-                -ar 48000
             )
         fi
         ;;
@@ -668,6 +684,28 @@ case $ext_lower {
         )
         ;;
 }
+
+
+audio_codec_args=()
+
+if [[ $audio != none ]]; then
+    case $ext_lower {
+        (flac)
+            audio_codec_args+=(
+                -c:a flac
+                -ar 48000
+            )
+            ;;
+
+        (*)
+            audio_codec_args+=(
+                -c:a aac
+                -b:a 128k
+                -ar 48000
+            )
+            ;;
+    }
+fi
 
 #
 # Main capture/reconnect loop.
@@ -815,6 +853,7 @@ while (( 1 )); do
             builtin command ffmpeg \
                 "${ffmpeg_input_args[@]}" \
                 "${audio_args[@]}" \
+                "${audio_codec_args[@]}" \
                 -vn \
                 -flush_packets 1 \
                 -avioflags direct \
@@ -825,6 +864,7 @@ while (( 1 )); do
                 "${ffmpeg_input_args[@]}" \
                 -map 0:v:0 \
                 "${audio_args[@]}" \
+                "${audio_codec_args[@]}" \
                 -vf "$video_filter" \
                 -fps_mode passthrough \
                 -enc_time_base filter \
@@ -849,6 +889,7 @@ while (( 1 )); do
             "${ffmpeg_input_args[@]}" \
             -map 0:v:0 \
             "${audio_args[@]}" \
+            "${audio_codec_args[@]}" \
             -vf "$video_filter" \
             -fps_mode passthrough \
             -enc_time_base filter \
