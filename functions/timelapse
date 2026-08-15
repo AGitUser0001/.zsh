@@ -1,7 +1,7 @@
 #!/usr/bin/env zsh
-builtin enable emulate zmodload zparseopts zselect strftime print printf command
 builtin emulate -LR zsh
 builtin zmodload zsh/zutil zsh/zselect zsh/datetime zsh/mathfunc
+builtin enable emulate zmodload zparseopts zselect strftime print printf command
 builtin setopt pipefail functionargzero
 
 local -a opt_multi opt_help opt_ext
