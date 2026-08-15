@@ -59,6 +59,7 @@ examples:
   $0 --audio sample --audio-sample-mode spectral-hold ./audio.flac
   $0 --multi URL
   $0 --fps 60 --sample-rate 2s URL
+  $0 --fps 29.97 --audio sample --audio-sample-mode spectral-interpolate ./audio.flac
   $0 --sample-rate 1f --fps 300 URL
   $0 --audio scaled URL
   $0 --audio sample --audio-sample-mode hold URL
@@ -72,13 +73,14 @@ integer rc=0
 integer streamlink_rc=0
 integer ffmpeg_rc=0
 integer sample_frames=0
-integer fps_integer=0
+integer fps_anchor=0
+integer audio_retime_rate=0
 integer audio_sample_stride=0
-integer gate_samples=128
+integer frame_gate_samples=64
+integer frame_window_samples=0
+integer frame_audio_rate=0
 integer hold_audio_rate=0
 integer spectral_hop_samples=0
-integer spectral_phase_gate_samples=64
-integer spectral_phase_window_samples=0
 integer spectral_fft_size=4096
 integer source_is_file=0
 integer source_has_video=1
@@ -168,10 +170,6 @@ if (( fps_value <= 0 )); then
     builtin print -u2 -r -- \
         "$0: --fps must be greater than zero"
     return 2
-fi
-
-if [[ $fps == <-> ]]; then
-    fps_integer=$fps
 fi
 
 #
@@ -291,7 +289,19 @@ fi
 #
 
 if [[ $sample_kind == time ]]; then
-    video_filter="setpts=PTS-STARTPTS,fps=fps=1/${sample_interval_expr},settb=expr=1/${fps},setpts=expr=N:strip_fps=1"
+    #
+    # eof_action=pass is important for sparse sampling.  Without it, fps's
+    # default EOF rounding can discard a perfectly valid final sample near
+    # EOF (for example 44 s sampled every 21 s would yield only 0 s + 21 s,
+    # losing the 42 s sample).
+    #
+    # The final fps pass is deliberately at the already-retimed output rate.
+    # It does not invent intermediate frames: PTS are already N/FPS.  Its job
+    # is to restore an explicit frame duration/rate after setpts:strip_fps.
+    # MP4/MOV otherwise can drop the final sparse frame when using
+    # -fps_mode passthrough because that last frame has no usable duration.
+    #
+    video_filter="setpts=PTS-STARTPTS,fps=fps=1/${sample_interval_expr}:eof_action=pass,settb=expr=1/${fps},setpts=expr=N:strip_fps=1,fps=fps=${fps}:eof_action=pass"
 
     (( frame_duration = 1.0 / fps_value ))
     (( speed_factor = fps_value * sample_seconds ))
@@ -302,7 +312,10 @@ if [[ $sample_kind == time ]]; then
     builtin printf -v frame_duration_text \
         '%.12g' $frame_duration
 else
-    video_filter="select=not(mod(n\\,${sample_frames})),settb=expr=1/${fps},setpts=expr=N:strip_fps=1"
+    # As above, the final fps pass only restores the declared output cadence
+    # and last-frame duration after retiming; the selected frames already have
+    # exact consecutive output PTS.
+    video_filter="select=not(mod(n\\,${sample_frames})),settb=expr=1/${fps},setpts=expr=N:strip_fps=1,fps=fps=${fps}:eof_action=pass"
 fi
 
 #
@@ -362,20 +375,35 @@ case $audio {
 
     (sample)
         #
-        # The sampled modes need one audio sampling point per output
-        # video frame. Audio sample rates are integers, so keep this
-        # experimental implementation strict for now.
+        # Sampled audio supports decimal FPS too.  FFmpeg's asetrate filter
+        # itself accepts only an integer sample rate, so modes that need a
+        # rate reinterpretation use an integer anchor plus a near-48-kHz
+        # correction stage.  That keeps the frame-index geometry tied to the
+        # requested (possibly fractional) FPS without rounding 29.97 -> 30.
         #
 
-        if (( ! fps_integer )); then
+        if (( fps_value > 48000.0 )); then
             builtin print -u2 -r -- \
-                '--audio sample currently requires an integer --fps'
+                '--audio sample requires --fps <= 48000'
             return 2
         fi
 
-        if (( fps_integer > 48000 )); then
+        (( fps_anchor = floor(fps_value + 0.5) ))
+
+        if (( fps_anchor < 1 )); then
+            fps_anchor=1
+        elif (( fps_anchor > 48000 )); then
+            fps_anchor=48000
+        fi
+
+        # After reconstructing sampled points at fps_anchor, reinterpret the
+        # resulting 48-kHz PCM at this rate and resample back to 48 kHz.
+        # Duration then becomes N / requested_FPS rather than N / fps_anchor.
+        (( audio_retime_rate = floor(48000.0 * fps_value / fps_anchor + 0.5) ))
+
+        if (( audio_retime_rate < 1 )); then
             builtin print -u2 -r -- \
-                '--audio sample requires --fps <= 48000'
+                "$0: --fps is too low for sampled audio at 48 kHz"
             return 2
         fi
 
@@ -415,19 +443,43 @@ case $audio {
                     audio_filter='asetpts=PTS-STARTPTS,aresample=48000,asetpts=N/SR/TB'
                 else
                     #
-                    # Use smaller audio frames than the sampled window so
-                    # aselect can cut reasonably close to its boundaries.
+                    # Select by integer PCM sample counts rather than timestamp
+                    # modulo.  This avoids both floating-boundary error and the
+                    # old up-to-128-sample overrun at every sampled window.
                     #
+                    (( frame_window_samples = floor(48000.0 / fps_value + 0.5) ))
 
-                    (( gate_samples = 12000 / fps_value ))
-
-                    if (( gate_samples > 128 )); then
-                        gate_samples=128
-                    elif (( gate_samples < 1 )); then
-                        gate_samples=1
+                    if (( frame_window_samples < 1 )); then
+                        frame_window_samples=1
                     fi
 
-                    audio_filter="asetpts=PTS-STARTPTS,aresample=48000,asetnsamples=n=${gate_samples}:p=0,aselect=lt(mod(t\\,${sample_seconds_text})\\,${frame_duration_text}),asetpts=N/SR/TB"
+                    frame_gate_samples=64
+
+                    if (( frame_gate_samples > frame_window_samples )); then
+                        frame_gate_samples=$frame_window_samples
+                    fi
+
+                    if (( frame_gate_samples > audio_sample_stride )); then
+                        frame_gate_samples=$audio_sample_stride
+                    fi
+
+                    while (( frame_gate_samples > 1 &&
+                              (frame_window_samples % frame_gate_samples ||
+                               audio_sample_stride % frame_gate_samples) )); do
+                        (( frame_gate_samples-- ))
+                    done
+
+                    # A fractional FPS usually means 48000/FPS is not an integer
+                    # number of PCM samples.  Keep the nearest real source window,
+                    # then apply only the tiny rate correction needed to make each
+                    # concatenated window exactly one output-frame long on average.
+                    (( frame_audio_rate = floor(frame_window_samples * fps_value + 0.5) ))
+
+                    if (( frame_audio_rate < 1 )); then
+                        frame_audio_rate=1
+                    fi
+
+                    audio_filter="asetpts=PTS-STARTPTS,aresample=48000,asetnsamples=n=${frame_gate_samples}:p=0,aselect=lt(mod(n*${frame_gate_samples}\\,${audio_sample_stride})\\,${frame_window_samples}),asetpts=N/SR/TB,asetrate=${frame_audio_rate},aresample=48000,asetpts=N/SR/TB"
                 fi
                 ;;
 
@@ -446,7 +498,7 @@ case $audio {
                 # anti-alias filter that reduced this mode to a spectral ghost.
                 #
 
-                audio_filter="asetpts=PTS-STARTPTS,aresample=48000,asetnsamples=n=1:p=0,aselect=not(mod(n\\,${audio_sample_stride})),asetpts=N/SR/TB,asetrate=${fps_integer},aresample=48000:filter_type=cubic:filter_size=4,asetpts=N/SR/TB"
+                audio_filter="asetpts=PTS-STARTPTS,aresample=48000,asetnsamples=n=1:p=0,aselect=not(mod(n\\,${audio_sample_stride})),asetpts=N/SR/TB,asetrate=${fps_anchor},aresample=48000:filter_type=cubic:filter_size=4,asetrate=${audio_retime_rate},aresample=48000:filter_type=cubic:filter_size=4,asetpts=N/SR/TB"
                 ;;
 
             (hold)
@@ -459,7 +511,13 @@ case $audio {
                 # source sampling interval becomes exactly one output frame.
                 #
 
-                (( hold_audio_rate = fps_integer * audio_sample_stride ))
+                (( hold_audio_rate = floor(fps_value * audio_sample_stride + 0.5) ))
+
+                if (( hold_audio_rate < 1 )); then
+                    builtin print -u2 -r -- \
+                        "$0: --fps/--sample-rate combination is too low for hold audio"
+                    return 2
+                fi
 
                 audio_filter="asetpts=PTS-STARTPTS,aresample=48000,aeval=if(eq(mod(n\\,${audio_sample_stride})\\,0)\\,st(ch\\,val(ch))\\,ld(ch)):c=same,asetrate=${hold_audio_rate},aresample=48000:filter_size=1,asetpts=N/SR/TB"
                 ;;
@@ -467,36 +525,30 @@ case $audio {
 
             (spectral-hold|spectral-interpolate)
                 #
-                # Spectral sampling with source-derived phase evolution.
+                # Spectral sampling with a continuous phase donor.
                 #
                 # Magnitude is sampled at the requested source cadence and then
-                # held or interpolated on the compressed timeline. Phase is NOT
-                # held, linearly interpolated, or regenerated from FFT-bin centers:
-                # all three approaches leave audible implementation fingerprints.
+                # held or interpolated on the compressed timeline.
                 #
-                # Instead, build a short phase-donor waveform using the same
-                # source sampling points as the video: keep exactly one output-frame
-                # worth of source PCM at each sampling point, concatenate those
-                # snippets, and analyze their real STFT phase continuously. That
-                # preserves off-bin frequency/phase motion without introducing a
-                # hidden N*FPS clock or phase-locking every FFT bin together.
+                # Phase comes from a pitch-preserving continuous time-compression
+                # of the source audio.  Using concatenated source snippets as the
+                # phase donor seems attractive, but each snippet boundary resets to
+                # the source phase at a different source time.  A constant tone can
+                # therefore acquire FPS-spaced sidebands merely because 1/FPS is
+                # not an integer number of its cycles.  Continuous atempo phase
+                # avoids that reset while leaving magnitude sampling in charge of
+                # the actual timelapse character.
                 #
-                # The fixed 4096-point Hann analysis still defines the intended
-                # spectral geometry. A 512-sample synthesis hop (87.5% overlap)
-                # is numerical resolution only; reducing it further converges to
-                # the same result instead of moving an audible comb.
+                # The fixed 4096-point Hann analysis defines the intended spectral
+                # geometry. A 512-sample synthesis hop (87.5% overlap) is numerical
+                # resolution only; reducing it further should converge rather than
+                # move an audible implementation comb.
                 #
-
-                if (( speed_factor < 1.0 )); then
-                    builtin print -u2 -r -- \
-                        "$0: spectral audio sampling currently requires speed >= 1x"
-                    return 2
-                fi
 
                 spectral_hop_samples=512
 
-                if (( fps_integer * spectral_hop_samples > 48000 )); then
-                    (( spectral_hop_samples = 48000 / fps_integer ))
+                if (( fps_value * spectral_hop_samples > 48000.0 )); then
+                    (( spectral_hop_samples = floor(48000.0 / fps_value) ))
                 fi
 
                 if (( spectral_hop_samples < 1 )); then
@@ -506,28 +558,37 @@ case $audio {
                 spectral_internal_fps="48000/${spectral_hop_samples}"
 
                 (( spectral_overlap = 1.0 - spectral_hop_samples / (1.0 * spectral_fft_size) ))
-                (( spectral_phase_window_samples = 48000.0 / fps_value + 0.5 ))
-
-                if (( spectral_phase_window_samples < 1 )); then
-                    spectral_phase_window_samples=1
-                fi
-
-                # Fine framing keeps source-window selection deterministic. Use
-                # sample counts rather than mod(t,...): floating timestamp boundary
-                # error can otherwise select one extra block per interval and
-                # audibly pitch-shift even a pure tone.
-                spectral_phase_gate_samples=64
-
-                if (( spectral_phase_gate_samples > spectral_phase_window_samples )); then
-                    spectral_phase_gate_samples=$spectral_phase_window_samples
-                fi
-
-                if (( spectral_phase_gate_samples < 1 )); then
-                    spectral_phase_gate_samples=1
-                fi
 
                 builtin printf -v spectral_overlap_text \
                     '%.12g' $spectral_overlap
+
+                # Build the same safe atempo chain as --audio scaled, but use it
+                # only as a phase donor.  Every stage stays in [0.5, 2.0].
+                tempo_filters=()
+                tempo_remaining=$speed_factor
+
+                while (( tempo_remaining > 2.0 )); do
+                    tempo_filters+=('atempo=2')
+                    (( tempo_remaining /= 2.0 ))
+                done
+
+                while (( tempo_remaining < 0.5 )); do
+                    tempo_filters+=('atempo=0.5')
+                    (( tempo_remaining /= 0.5 ))
+                done
+
+                if (( abs(tempo_remaining - 1.0) > 0.0000001 )); then
+                    builtin printf -v tempo_text \
+                        '%.12g' $tempo_remaining
+
+                    tempo_filters+=(
+                        "atempo=${tempo_text}"
+                    )
+                fi
+
+                if (( ! ${#tempo_filters} )); then
+                    tempo_filters=('anull')
+                fi
 
                 if [[ $audio_sample_mode == spectral-hold ]]; then
                     spectral_temporal_filter="fps=fps=${spectral_internal_fps}"
@@ -537,7 +598,7 @@ case $audio {
                     spectral_temporal_filter="framerate=fps=${spectral_internal_fps}:interp_start=0:interp_end=255:scene=100"
                 fi
 
-                spectral_filter_complex="[0:a:0]asetpts=PTS-STARTPTS,aresample=48000,aformat=channel_layouts=stereo,asplit=2[spec_mag_audio][spec_phase_audio];[spec_mag_audio]showspectrum=s=1x${spectral_fft_size}:slide=fullframe:mode=separate:color=channel:scale=log:win_func=hann:overlap=${spectral_overlap_text}:data=magnitude,fps=fps=1/${sample_seconds_text},settb=expr=1/${fps},setpts=N,${spectral_temporal_filter},settb=expr=${spectral_hop_samples}/48000,setpts=N[spec_mag];[spec_phase_audio]asetnsamples=n=${spectral_phase_gate_samples}:p=0,aselect=lt(mod(n*${spectral_phase_gate_samples}\,${audio_sample_stride})\,${spectral_phase_window_samples}),asetpts=N/SR/TB,showspectrum=s=1x${spectral_fft_size}:slide=fullframe:mode=separate:color=channel:scale=lin:win_func=hann:overlap=${spectral_overlap_text}:data=phase,settb=expr=${spectral_hop_samples}/48000,setpts=N[spec_phase];[spec_mag][spec_phase]spectrumsynth=channels=2:sample_rate=48000:scale=log:slide=fullframe:win_func=hann:overlap=${spectral_overlap_text},aformat=channel_layouts=stereo,asetpts=N/SR/TB[spectral_audio]"
+                spectral_filter_complex="[0:a:0]asetpts=PTS-STARTPTS,aresample=48000,aformat=channel_layouts=stereo,asplit=2[spec_mag_audio][spec_phase_audio];[spec_mag_audio]showspectrum=s=1x${spectral_fft_size}:slide=fullframe:mode=separate:color=channel:scale=log:win_func=hann:overlap=${spectral_overlap_text}:data=magnitude,fps=fps=1/${sample_seconds_text},settb=expr=1/${fps},setpts=N,${spectral_temporal_filter},settb=expr=${spectral_hop_samples}/48000,setpts=N[spec_mag];[spec_phase_audio]${(j:,:)tempo_filters},aresample=48000,asetpts=N/SR/TB,showspectrum=s=1x${spectral_fft_size}:slide=fullframe:mode=separate:color=channel:scale=lin:win_func=hann:overlap=${spectral_overlap_text}:data=phase,settb=expr=${spectral_hop_samples}/48000,setpts=N[spec_phase];[spec_mag][spec_phase]spectrumsynth=channels=2:sample_rate=48000:scale=log:slide=fullframe:win_func=hann:overlap=${spectral_overlap_text},aformat=channel_layouts=stereo,asetpts=N/SR/TB[spectral_audio]"
                 ;;
         }
 
