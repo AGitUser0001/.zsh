@@ -1,4 +1,0 @@
-HISTFILE='/home/t8945/.zsh/history/jetson.zsh_history'
-ZCALC_HISTORY_FILE='/home/t8945/.zsh/history/jetson.zcalc_history'
-SAVEHIST='10000000'
-HISTSIZE='100000'
