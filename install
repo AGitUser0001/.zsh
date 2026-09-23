@@ -143,6 +143,7 @@ typeset -A links=(
   [zcp]=$ZMV
   [zln]=$ZMV
 )
+/bin/mkdir -p "$DIR/functions/ln"
 for OUT IN ( ${(@kv)links} ) {
   OUT=$DIR/functions/ln/$OUT
   printf 'Linking %s to %s\n' "$OUT" "$IN"
