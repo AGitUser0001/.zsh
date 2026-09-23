@@ -4,6 +4,6 @@
   builtin zmodload zsh/terminfo
   local id;
   for id ( $reply ) {
-    builtin eval builtin echoti "$id"
+    [[ -n $terminfo[$id] ]] && builtin eval builtin echoti "$id"
   }
 }

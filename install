@@ -1,4 +1,4 @@
-#!/bin/zsh -f
+#!/usr/bin/env -S zsh -f
 if [[ $1 == -*x* ]] set -x;
 zmodload zsh/system
 path+=( /bin )
@@ -28,6 +28,7 @@ readconf() {
 
 let SAVEHIST=10000000 HISTSIZE=100000
 readconf HISTFILE
+readconf ZCALC_HISTORY_FILE
 readconf SAVEHIST
 readconf HISTSIZE
 HISTFILE=$HISTFILE:a
@@ -100,6 +101,7 @@ if [[ $HOMEBREW_PREFIX != $OLD_PREFIX ]] {
 }
 vared -p 'Homebrew cellar (HOMEBREW_CELLAR): ' HOMEBREW_CELLAR
 vared -p 'Homebrew repository (HOMEBREW_REPOSITORY): ' HOMEBREW_REPOSITORY
+path=( $HOMEBREW_PREFIX/bin $path )
 
 exec 3<&1 # create file descriptor to be able to redirect something to both stdout AND a file
 writeconf() {
@@ -119,6 +121,7 @@ OUT="$DIR/config/zshrc"
 printf 'Writing config (zshrc) to %s\n' "$OUT"
 printf '' > $OUT
 writeconf HISTFILE
+writeconf ZCALC_HISTORY_FILE
 writeconf SAVEHIST
 writeconf HISTSIZE
 
@@ -147,6 +150,7 @@ echo
 let MODIFIED=0 && true
 for IN ( $DIR/crontab/* ) {
   read -rd '' DATA < $IN && true
+  DATA=${DATA//@ZSH@/${commands[zsh]}}
   if [[ $CRONTAB == (*$'\n'|)$DATA($'\n'*|) ]] {
     printf '%s already in crontab\n' "$IN:t"
     continue

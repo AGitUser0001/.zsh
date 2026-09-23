@@ -1,3 +1,4 @@
+#@if [[ $OSTYPE == darwin* ]]
 Unity=~/Library/Unity
 
 # Apache
@@ -8,4 +9,5 @@ httpd=$HOMEBREW_PREFIX/etc/httpd
 # Cloud Services
 OneDrive=${${:-~/OneDrive}:A}
 GoogleDrive=${${:-~/Google Drive}:A}
+#@if [[ $OSTYPE == darwin* ]]
 iCloud=~/Library/"Mobile Documents"/com~apple~CloudDocs

@@ -1,7 +1,18 @@
 zle-push
 
 source $ZDOTDIR/config/zshrc
+if [[ -n $ZCALC_HISTORY_FILE && -e $ZCALC_HISTORY_FILE && -L $ZDOTDIR/.zcalc_history ]]; then
+  _zcalc_link=$ZDOTDIR/.zcalc_history
+  [[ $_zcalc_link:P == $ZCALC_HISTORY_FILE:P ]] || /bin/ln -sfn -- $ZCALC_HISTORY_FILE $_zcalc_link
+  unset _zcalc_link
+fi
 define $ZDOTDIR/definitions
+if [[ $OSTYPE == linux* ]]; then
+  for _mac_function ( htop shortcut selfsign ); do
+    (( $+functions[$_mac_function] )) && unfunction $_mac_function
+  done
+  unset _mac_function
+fi
 
 __reset-tty
 __reset

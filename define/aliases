@@ -3,8 +3,10 @@
 se=sudoedit
 sedit=sudoedit
 sudoed=sudoedit
+#@if [[ $OSTYPE == darwin* && -x /usr/bin/defaults ]]
 stage-manager='defaults write com.apple.WindowManager GloballyEnabled -int $((1-$(defaults read com.apple.WindowManager GloballyEnabled)))'
 compaudit=:
 catch='noglob catch'
 rm='rm -I'
+#@if [[ $OSTYPE == darwin* && $+commands[trash] == 1 ]]
 del='trash -F'

@@ -13,7 +13,7 @@
 
 ':prompt:X:git:*:dirty:*'     symbol            '*'
 
-':chpwd:'                     recent-dirs-file  $ZDOTDIR/history/.chpwd-recent-dirs
+':chpwd:'                     recent-dirs-file  $ZDOTDIR/history/jetson.chpwd-recent-dirs
 ':chpwd:'                     recent-dirs-max   100000
 
 ':completion:*'               use-cache         on

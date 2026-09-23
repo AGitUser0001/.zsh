@@ -2,5 +2,5 @@ builtin eval "$SETUP"
 
 if [[ ! -t 1 ]] return
 builtin ttyctl -u
-/bin/stty -f /dev/tty sane
+/bin/stty sane < /dev/tty
 builtin ttyctl -f
