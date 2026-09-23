@@ -126,9 +126,22 @@ writeconf SAVEHIST
 writeconf HISTSIZE
 
 echo
+ZMV=$HOMEBREW_PREFIX/share/zsh/functions/zmv
+if [[ ! -f $ZMV ]] {
+  for location ( $fpath ) {
+    if [[ -f $location/zmv ]] {
+      ZMV=$location/zmv
+      break
+    }
+  }
+}
+if [[ ! -f $ZMV ]] {
+  printf '%s\n' 'Cannot find zmv in Homebrew or zsh function paths' >&2
+  return 1
+}
 typeset -A links=(
-  [zcp]=$HOMEBREW_PREFIX/share/zsh/functions/zmv
-  [zln]=$HOMEBREW_PREFIX/share/zsh/functions/zmv
+  [zcp]=$ZMV
+  [zln]=$ZMV
 )
 for OUT IN ( ${(@kv)links} ) {
   OUT=$DIR/functions/ln/$OUT
