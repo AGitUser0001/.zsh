@@ -92,6 +92,30 @@ if [[ "$is_worktree" == true ]]; then
     '
 fi
 
+
+# Search current tracked filenames
+if [[ "$is_worktree" == true ]]; then
+  git -C "$repo" ls-files -z |
+    SCANPII_PATTERN="$pii" SCANPII_NOT="$exclude" perl -0ne '
+      BEGIN {
+        $want = qr/$ENV{SCANPII_PATTERN}/i;
+        $omit = lc($ENV{SCANPII_NOT} // "");
+      }
+
+      s/\0\z//;
+      next unless /$want/;
+
+      my $path = $_;
+      $path =~ s/\n/\\n/g;
+      $path =~ s/\r/\\r/g;
+
+      my $out = "[worktree]:/$path: [filename]";
+      next if length($omit) && index(lc($out), $omit) >= 0;
+
+      print "$out\n";
+    '
+fi
+
 (( current_only )) && return 0
 
 # Search all locally available Git history
@@ -168,5 +192,52 @@ git -C "$repo" -c core.quotePath=false --no-pager log \
       my ($marker, $content) = ($1, $2);
       emit("[$ref]:/$path: $marker$content")
         if $content =~ $want;
+    }
+  '
+
+# Search historical filenames across all reachable refs and reflogs
+git -C "$repo" --no-pager log \
+  --all --reflog --name-status -z \
+  --diff-merges=first-parent \
+  --no-color \
+  --format='%x1e%H' |
+  SCANPII_PATTERN="$pii" SCANPII_NOT="$exclude" perl -0ne '
+    BEGIN {
+      $want = qr/$ENV{SCANPII_PATTERN}/i;
+      $omit = lc($ENV{SCANPII_NOT} // "");
+    }
+
+    s/\0\z//;
+
+    # Consume filenames following a change status
+    if ($remaining) {
+      --$remaining;
+
+      if (/$want/) {
+        my $path = $_;
+        $path =~ s/\n/\\n/g;
+        $path =~ s/\r/\\r/g;
+
+        my $out = "[$ref]:/$path: [filename]";
+
+        print "$out\n"
+          if !$seen{$path}++ &&
+          !(length($omit) && index(lc($out), $omit) >= 0);
+      }
+      next;
+    }
+
+    # New commit
+    if (/^\x1e([0-9a-f]{40,64})$/) {
+      $ref = substr($1, 0, 12);
+      %seen = ();
+      next;
+    }
+
+    next unless defined $ref;
+
+    # Renames/copies have two paths; other changes have one
+    if (/^\n*([A-Z][0-9]*)$/) {
+      $remaining = $1 =~ /^[RC]/ ? 2 : 1;
     }
   '
