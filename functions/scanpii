@@ -1,0 +1,170 @@
+emulate -L zsh
+
+local pii='' exclude='' repo is_worktree arg
+local current_only=0
+local usage='Usage: scanpii [current] <pii_string> [not <negate_string>]'
+
+if [[ $# -eq 1 && "$1" == help ]]; then
+  cat <<'HELP'
+Usage: scanpii [current] <pii_string> [not <negate_string>]
+
+Keywords:
+  help     Show help (must be used alone)
+  current  Search current tracked files only (prefix)
+  not      Exclude lines containing a literal string
+
+Examples:
+  scanpii 'abc|def'
+  scanpii current 'abc|def'
+  scanpii 'abc|def' not 'example.com'
+  scanpii current 'abc|def' not 'test'
+
+History scope:
+  Local branches, remote-tracking refs, tags,
+  stashes, reflogs, and merge commits.
+
+Output:
+  [worktree]:/file: matching content
+  [commit]:/file: changed content
+  [commit]:metadata: matching metadata
+
+Case-insensitive. No pager, line numbers, or context.
+PII pattern is required and supports regular expressions.
+HELP
+  return 0
+fi
+
+for arg in "$@"; do
+  if [[ "$arg" == help ]]; then
+    print -u2 -- "Error: 'help' must be used alone."
+    return 2
+  fi
+done
+
+if [[ "${1-}" == current ]]; then
+  current_only=1
+  shift
+fi
+
+if (( $# == 0 )) || [[ "$1" == not || -z "$1" ]]; then
+  print -u2 -- "$usage"
+  return 2
+fi
+
+pii="$1"
+shift
+
+if (( $# )); then
+  if (( $# != 2 )) || [[ "$1" != not || -z "$2" ]]; then
+    print -u2 -- "$usage"
+    return 2
+  fi
+  exclude="$2"
+fi
+
+# Resolve repository root, including bare repositories
+if ! repo=$(git rev-parse --show-toplevel 2>/dev/null); then
+  repo=$(git rev-parse --absolute-git-dir 2>/dev/null) || {
+    print -u2 -- "Error: Not inside a Git repository."
+    return 1
+  }
+fi
+
+is_worktree=$(git -C "$repo" rev-parse --is-inside-work-tree)
+
+if (( current_only )) && [[ "$is_worktree" != true ]]; then
+  print -u2 -- "Error: Bare repositories have no worktree."
+  return 1
+fi
+
+# Search current tracked files
+if [[ "$is_worktree" == true ]]; then
+  git -C "$repo" -c core.quotePath=false --no-pager grep \
+    -i -I -E --no-color --no-line-number --no-column \
+    --no-heading --no-break --full-name -- "$pii" |
+    SCANPII_NOT="$exclude" perl -ne '
+      BEGIN { $omit = lc($ENV{SCANPII_NOT} // "") }
+      $out = "[worktree]:/$_";
+      next if length($omit) && index(lc($out), $omit) >= 0;
+      print $out;
+    '
+fi
+
+(( current_only )) && return 0
+
+# Search all locally available Git history
+git -C "$repo" -c core.quotePath=false --no-pager log \
+  --all --reflog -p -U0 --diff-merges=first-parent \
+  --no-color --no-ext-diff --no-textconv \
+  --format='%x1e%H%nAuthor: %an <%ae>%nCommitter: %cn <%ce>%n%B%n%x1f' |
+  SCANPII_PATTERN="$pii" SCANPII_NOT="$exclude" perl -ne '
+    BEGIN {
+      $want = qr/$ENV{SCANPII_PATTERN}/i;
+      $omit = lc($ENV{SCANPII_NOT} // "");
+    }
+
+    sub emit {
+      my ($s) = @_;
+      return if length($omit) && index(lc($s), $omit) >= 0;
+      print "$s\n";
+    }
+
+    s/\r?\n\z//;
+
+    # Identify commit
+    if (/^\x1e([0-9a-f]{40,64})$/) {
+      $ref = substr($1, 0, 12);
+      $patch = $hunk = 0;
+      $path = $old_path = "";
+      next;
+    }
+
+    next unless defined $ref;
+
+    # Transition from metadata to patch
+    if (/^\x1f$/) {
+      $patch = 1;
+      next;
+    }
+
+    # Author, committer, and commit message
+    if (!$patch) {
+      emit("[$ref]:metadata: $_") if /$want/;
+      next;
+    }
+
+    # Identify changed file
+    if (/^diff --git /) {
+      $hunk = 0;
+      $path = $old_path = "";
+      next;
+    }
+
+    if (!$hunk && /^--- (.*)$/) {
+      $old_path = $1;
+      $old_path =~ s/\t.*\z//;
+      $old_path =~ s{^a/}{};
+      next;
+    }
+
+    if (!$hunk && /^\+\+\+ (.*)$/) {
+      $path = $1;
+      $path =~ s/\t.*\z//;
+      $path = $old_path if $path eq "/dev/null";
+      $path =~ s{^b/}{};
+      next;
+    }
+
+    # Enter diff hunk
+    if (/^@@ /) {
+      $hunk = 1;
+      next;
+    }
+
+    # Only matching additions and deletions
+    if ($hunk && /^([+-])(.*)$/) {
+      my ($marker, $content) = ($1, $2);
+      emit("[$ref]:/$path: $marker$content")
+        if $content =~ $want;
+    }
+  '
