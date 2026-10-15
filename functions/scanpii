@@ -1,4 +1,4 @@
-emulate -L zsh
+builtin emulate -L zsh
 
 local pii='' exclude='' repo is_worktree arg
 local current_only=0
@@ -22,6 +22,8 @@ Examples:
 History scope:
   Local branches, remote-tracking refs, tags,
   stashes, reflogs, and merge commits.
+
+To scan all branches run git fetch --all --tags first
 
 Output:
   [worktree]:/file: matching content
